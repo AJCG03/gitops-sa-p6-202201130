@@ -7,7 +7,7 @@ Repositorio **independiente** de manifiestos declarativos para el ecosistema de 
 Este repo es la **única fuente de verdad** del estado del clúster. Ningún pipeline aplica cambios directamente: el pipeline solo abre un Pull Request actualizando tags de imagen, y **ArgoCD** es el único componente que sincroniza contra Kubernetes.
 
 ## Estructura
-.
+```text
 ├── apps/ # Applications de ArgoCD (una por microservicio)
 ├── rollouts/ # Rollouts canary (reemplazan a los Deployment)
 ├── analysis/ # AnalysisTemplates (smoke, integración, carga)
@@ -15,6 +15,7 @@ Este repo es la **única fuente de verdad** del estado del clúster. Ningún pip
 │ └── sa-platform/
 ├── policies/ # Políticas Kyverno (mínimo 3)
 └── secrets/ # SealedSecrets (nada en texto plano)
+```
 ## Ambientes
 
 - `dev`
