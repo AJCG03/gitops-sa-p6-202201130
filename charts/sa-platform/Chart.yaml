@@ -5,8 +5,10 @@ type: application
 version: 2.0.0
 appVersion: "2.0.0"
 
-dependencies:
-  - name: rabbitmq
-    version: "12.x.x"
-    repository: "https://charts.bitnami.com/bitnami"
-    condition: rabbitmq.enabled
+# Dependencias deshabilitadas temporalmente para validar el flujo GitOps
+# Se reactivarán en el bloque de RabbitMQ cuando se necesite
+# dependencies:
+#   - name: rabbitmq
+#     version: "12.x.x"
+#     repository: "https://charts.bitnami.com/bitnami"
+#     condition: rabbitmq.enabled
