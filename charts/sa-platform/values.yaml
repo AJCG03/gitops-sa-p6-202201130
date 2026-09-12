@@ -1,0 +1,209 @@
+# ============================================
+# CONFIGURACIÓN GLOBAL
+# ============================================
+global:
+  namespace: "sa-p6"
+  logLevel: "info"
+  environment: "base"
+
+# ============================================
+# API GATEWAY
+# ============================================
+api_gateway:
+  replicaCount: 2
+  image:
+    repository: "ghcr.io/ajcg03/api-gateway"
+    tag: "v1.0.0"          # será sobrescrito por values-<env>.yaml
+    pullPolicy: "IfNotPresent"
+  service:
+    type: LoadBalancer
+  resources:
+    limits:
+      cpu: "300m"
+      memory: "384Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+  # securityContext obligatorio por política Kyverno
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+# ============================================
+# AUTH SERVICE
+# ============================================
+auth_service:
+  replicaCount: 2
+  image:
+    repository: "ghcr.io/ajcg03/auth-service"
+    tag: "v1.0.0"
+    pullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: "300m"
+      memory: "384Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    cpuThreshold: 70
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+# ============================================
+# SENSORES SERVICE
+# ============================================
+sensores_service:
+  replicaCount: 2
+  image:
+    repository: "ghcr.io/ajcg03/sensores-service"
+    tag: "v1.0.0"
+    pullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: "300m"
+      memory: "384Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    cpuThreshold: 70
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+# ============================================
+# DATOS SERVICE
+# ============================================
+datos_service:
+  replicaCount: 2
+  image:
+    repository: "ghcr.io/ajcg03/datos-service"
+    tag: "v1.0.0"
+    pullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: "300m"
+      memory: "384Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    cpuThreshold: 70
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+# ============================================
+# ALERTAS SERVICE
+# ============================================
+alertas_service:
+  replicaCount: 2
+  image:
+    repository: "ghcr.io/ajcg03/alertas-service"
+    tag: "v1.0.0"
+    pullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: "300m"
+      memory: "384Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    cpuThreshold: 70
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+# ============================================
+# ROLLOUT — CONFIGURACIÓN CANARY GLOBAL
+# ============================================
+rollout:
+  canary:
+    steps:
+      - setWeight: 20
+      - pause:
+          duration: 60s
+      - analysis:
+          templateName: smoke-analysis
+      - setWeight: 50
+      - pause:
+          duration: 60s
+      - analysis:
+          templateName: load-analysis
+      - setWeight: 80
+      - pause:
+          duration: 60s
+      - setWeight: 100
+
+# ============================================
+# RABBITMQ (dependencia)
+# ============================================
+rabbitmq:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/rabbitmq
+    tag: 3.12.13-debian-12-r0
+    pullPolicy: IfNotPresent
+  auth:
+    username: "app_user"
+    # password se inyecta desde SealedSecret, no aquí
+    existingSecret: "rabbitmq-credentials"
+  persistence:
+    enabled: false
+  podSecurityContext:
+    enabled: false
+  containerSecurityContext:
+    enabled: false
+  metrics:
+    enabled: false
+  resources:
+    limits:
+      cpu: "250m"
+      memory: "256Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+
+# ============================================
+# DESHABILITAR BASES INTERNAS
+# ============================================
+mongodb:
+  enabled: false
+mysql:
+  enabled: false

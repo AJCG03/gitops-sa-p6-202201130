@@ -1,0 +1,30 @@
+global:
+  environment: "dev"
+  logLevel: "debug"
+
+api_gateway:
+  replicaCount: 1
+auth_service:
+  replicaCount: 1
+  hpa:
+    enabled: false
+sensores_service:
+  replicaCount: 1
+  hpa:
+    enabled: false
+datos_service:
+  replicaCount: 1
+  hpa:
+    enabled: false
+alertas_service:
+  replicaCount: 1
+  hpa:
+    enabled: false
+
+rollout:
+  canary:
+    steps:
+      - setWeight: 50
+      - pause:
+          duration: 30s
+      - setWeight: 100

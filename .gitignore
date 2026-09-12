@@ -1,0 +1,9 @@
+# Secretos reales que NUNCA deben subirse
+*.key
+*.pem
+secrets/*.plain.yaml
+secrets/*.decrypted.yaml
+kubeconfig
+.kube/
+*.bak
+.DS_Store

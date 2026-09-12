@@ -1,0 +1,39 @@
+global:
+  environment: "prod"
+  logLevel: "warn"
+
+# Tags de producción — los actualiza el PR automático del pipeline
+api_gateway:
+  image:
+    tag: "v1.0.0"
+auth_service:
+  image:
+    tag: "v1.0.0"
+sensores_service:
+  image:
+    tag: "v1.0.0"
+datos_service:
+  image:
+    tag: "v1.0.0"
+alertas_service:
+  image:
+    tag: "v1.0.0"
+
+# Canary completo en prod (3 pasos con análisis)
+rollout:
+  canary:
+    steps:
+      - setWeight: 20
+      - pause:
+          duration: 120s
+      - analysis:
+          templateName: smoke-analysis
+      - setWeight: 50
+      - pause:
+          duration: 120s
+      - analysis:
+          templateName: load-analysis
+      - setWeight: 80
+      - pause:
+          duration: 120s
+      - setWeight: 100

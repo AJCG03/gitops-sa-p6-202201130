@@ -1,0 +1,12 @@
+apiVersion: v2
+name: sa-platform-p8
+description: Plataforma de microservicios - Práctica 8 (GitOps + entrega progresiva)
+type: application
+version: 2.0.0
+appVersion: "2.0.0"
+
+dependencies:
+  - name: rabbitmq
+    version: "12.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: rabbitmq.enabled
