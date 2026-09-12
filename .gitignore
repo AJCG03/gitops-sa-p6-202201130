@@ -6,4 +6,5 @@ secrets/*.decrypted.yaml
 kubeconfig
 .kube/
 *.bak
-.DS_Store
+.DS_Storeinstall-argocd.yaml
+install-argo-rollouts.yaml
