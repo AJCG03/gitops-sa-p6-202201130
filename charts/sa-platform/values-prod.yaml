@@ -5,7 +5,7 @@ global:
 # Tags de producción — los actualiza el PR automático del pipeline
 api_gateway:
   image:
-    tag: "v1.0.0"
+    tag: "v3"
 auth_service:
   image:
     tag: "v1.0.0"
