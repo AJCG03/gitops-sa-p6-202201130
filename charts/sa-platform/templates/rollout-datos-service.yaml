@@ -1,0 +1,82 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: datos-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: datos-service
+    app.kubernetes.io/part-of: sa-platform
+spec:
+  replicas: {{ .Values.datos_service.replicaCount }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: datos-service
+  strategy:
+    canary:
+      stableService: datos-service-stable
+      canaryService: datos-service-canary
+      steps:
+        - setWeight: 20
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: smoke-datos-service
+            args:
+              - name: service-name
+                value: datos-service-canary
+        - setWeight: 50
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: load-datos-service
+            args:
+              - name: service-name
+                value: datos-service-canary
+        - setWeight: 80
+        - pause:
+            duration: 60s
+        - setWeight: 100
+  template:
+    metadata:
+      labels:
+        app: datos-service
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: datos-service
+          image: "{{ .Values.datos_service.image.repository }}:{{ .Values.datos_service.image.tag }}"
+          imagePullPolicy: {{ .Values.datos_service.image.pullPolicy }}
+          ports:
+            - containerPort: 3003
+          env:
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: url
+            - name: MONGODB_DB
+              value: "DatosDB"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3003
+            initialDelaySeconds: 45
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3003
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.datos_service.resources | nindent 12 }}

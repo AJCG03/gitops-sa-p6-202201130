@@ -1,0 +1,51 @@
+# Service estable
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertas-service-stable
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: alertas-service
+    role: stable
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3004
+      targetPort: 3004
+      name: http
+  selector:
+    app: alertas-service
+---
+# Service canary
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertas-service-canary
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: alertas-service
+    role: canary
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3004
+      targetPort: 3004
+      name: http
+  selector:
+    app: alertas-service
+---
+# Service principal
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertas-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: alertas-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3004
+      targetPort: 3004
+  selector:
+    app: alertas-service

@@ -1,0 +1,99 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: auth-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: auth-service
+    app.kubernetes.io/part-of: sa-platform
+spec:
+  replicas: {{ .Values.auth_service.replicaCount }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: auth-service
+  strategy:
+    canary:
+      stableService: auth-service-stable
+      canaryService: auth-service-canary
+      steps:
+        - setWeight: 20
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: smoke-auth-service
+            args:
+              - name: service-name
+                value: auth-service-canary
+        - setWeight: 50
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: load-auth-service
+            args:
+              - name: service-name
+                value: auth-service-canary
+        - setWeight: 80
+        - pause:
+            duration: 60s
+        - setWeight: 100
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: auth-service
+          image: "{{ .Values.auth_service.image.repository }}:{{ .Values.auth_service.image.tag }}"
+          imagePullPolicy: {{ .Values.auth_service.image.pullPolicy }}
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: neon-credentials
+                  key: host
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: neon-credentials
+                  key: user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: neon-credentials
+                  key: password
+            - name: DB_NAME
+              value: "neondb"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: neon-credentials
+                  key: url
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 45
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.auth_service.resources | nindent 12 }}

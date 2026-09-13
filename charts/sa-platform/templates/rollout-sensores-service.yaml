@@ -1,0 +1,82 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: sensores-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: sensores-service
+    app.kubernetes.io/part-of: sa-platform
+spec:
+  replicas: {{ .Values.sensores_service.replicaCount }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: sensores-service
+  strategy:
+    canary:
+      stableService: sensores-service-stable
+      canaryService: sensores-service-canary
+      steps:
+        - setWeight: 20
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: smoke-sensores-service
+            args:
+              - name: service-name
+                value: sensores-service-canary
+        - setWeight: 50
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: load-sensores-service
+            args:
+              - name: service-name
+                value: sensores-service-canary
+        - setWeight: 80
+        - pause:
+            duration: 60s
+        - setWeight: 100
+  template:
+    metadata:
+      labels:
+        app: sensores-service
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: sensores-service
+          image: "{{ .Values.sensores_service.image.repository }}:{{ .Values.sensores_service.image.tag }}"
+          imagePullPolicy: {{ .Values.sensores_service.image.pullPolicy }}
+          ports:
+            - containerPort: 3002
+          env:
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: url
+            - name: MONGODB_DB
+              value: "SensoresDB"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 45
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.sensores_service.resources | nindent 12 }}

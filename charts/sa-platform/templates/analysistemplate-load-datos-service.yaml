@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: load-datos-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  args:
+    - name: service-name
+  metrics:
+    - name: load-test
+      interval: 60s
+      count: 2
+      successCondition: result[0] < 0.05
+      failureLimit: 1
+      provider:
+        job:
+          spec:
+            backoffLimit: 0
+            template:
+              metadata:
+                labels:
+                  app: analysis-load
+              spec:
+                restartPolicy: Never
+                containers:
+                  - name: k6
+                    image: grafana/k6:latest
+                    command: ["k6", "run", "--vus", "20", "--duration", "40s", "/scripts/load.js"]
+                    env:
+                      - name: TARGET_URL
+                        value: "http://{{`{{args.service-name}}`}}.{{ .Values.global.namespace }}.svc.cluster.local"
+                      - name: ERROR_THRESHOLD
+                        value: "0.05"
+                      - name: P95_THRESHOLD_MS
+                        value: "500"
+                    volumeMounts:
+                      - name: scripts
+                        mountPath: /scripts
+                volumes:
+                  - name: scripts
+                    configMap:
+                      name: k6-load-scripts
