@@ -14,13 +14,8 @@ spec:
       app: api-gateway
   strategy:
     canary:
-      # Service que recibe SOLO tráfico estable
       stableService: api-gateway-stable
-      # Service que recibe SOLO tráfico canary
       canaryService: api-gateway-canary
-      trafficRouting:
-        nginx:
-          stableIngress: api-gateway
       steps:
         - setWeight: 20
         - pause:
