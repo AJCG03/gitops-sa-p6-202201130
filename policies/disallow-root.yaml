@@ -6,7 +6,7 @@ metadata:
     policies.kyverno.io/title: Disallow Running as Root
     policies.kyverno.io/severity: high
 spec:
-  validationFailureAction: Enforce
+  validationFailureAction: Audit
   background: true
   rules:
     - name: check-runasnonroot

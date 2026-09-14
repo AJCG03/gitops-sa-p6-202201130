@@ -63,10 +63,18 @@ spec:
               value: "http://alertas-service:3004"
           securityContext:
             runAsNonRoot: true
-            runAsUser: 1000
+            runAsUser: 101
+            runAsGroup: 101
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+            - name: nginx-tmp
+              mountPath: /tmp
           livenessProbe:
             httpGet:
               path: /health
@@ -81,3 +89,10 @@ spec:
             periodSeconds: 5
           resources:
             {{- toYaml .Values.api_gateway.resources | nindent 12 }}
+      volumes:
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+        - name: nginx-tmp
+          emptyDir: {}
