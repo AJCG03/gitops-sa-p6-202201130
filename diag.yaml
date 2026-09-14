@@ -1,0 +1,595 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"argoproj.io/v1alpha1","kind":"Application","metadata":{"annotations":{},"finalizers":["resources-finalizer.argocd.argoproj.io"],"labels":{"app":"sa-platform","environment":"prod"},"name":"sa-platform","namespace":"argocd"},"spec":{"destination":{"namespace":"sa-p6","server":"https://kubernetes.default.svc"},"ignoreDifferences":[{"group":"argoproj.io","jsonPointers":["/spec/replicas","/status","/metadata/annotations"],"kind":"Rollout","managedFieldsManagers":["argoproj.io/rollouts-controller"]},{"group":"","jsonPointers":["/spec/clusterIP","/spec/clusterIPs","/metadata/annotations"],"kind":"Service"}],"project":"default","source":{"helm":{"valueFiles":["values.yaml","values-prod.yaml"]},"path":"charts/sa-platform","repoURL":"https://github.com/AJCG03/gitops-sa-p6-202201130.git","targetRevision":"main"},"syncPolicy":{"automated":{"prune":true,"selfHeal":true},"retry":{"backoff":{"duration":"10s","factor":2,"maxDuration":"5m"},"limit":5},"syncOptions":["CreateNamespace=true","ServerSideApply=true"]}}}
+  creationTimestamp: "2026-09-14T01:10:26Z"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+  generation: 303
+  labels:
+    app: sa-platform
+    environment: prod
+  name: sa-platform
+  namespace: argocd
+  resourceVersion: "1789353326217631015"
+  uid: 85fbd24a-cc63-4bc0-b480-cf8e7fecfdfc
+spec:
+  destination:
+    namespace: sa-p6
+    server: https://kubernetes.default.svc
+  ignoreDifferences:
+  - group: argoproj.io
+    jsonPointers:
+    - /spec/replicas
+    - /status
+    - /metadata/annotations
+    kind: Rollout
+    managedFieldsManagers:
+    - argoproj.io/rollouts-controller
+  - jsonPointers:
+    - /spec/clusterIP
+    - /spec/clusterIPs
+    - /metadata/annotations
+    kind: Service
+  project: default
+  source:
+    helm:
+      valueFiles:
+      - values.yaml
+      - values-prod.yaml
+    path: charts/sa-platform
+    repoURL: https://github.com/AJCG03/gitops-sa-p6-202201130.git
+    targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+      limit: 5
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true
+status:
+  controllerNamespace: argocd
+  health:
+    lastTransitionTime: "2026-09-14T01:12:41Z"
+    status: Healthy
+  history:
+  - deployStartedAt: "2026-09-14T01:10:34Z"
+    deployedAt: "2026-09-14T01:11:39Z"
+    id: 0
+    initiatedBy:
+      automated: true
+    revision: 9258d79f53b436bf80640910b2419d039afe8fc7
+    source:
+      helm:
+        valueFiles:
+        - values.yaml
+        - values-prod.yaml
+      path: charts/sa-platform
+      repoURL: https://github.com/AJCG03/gitops-sa-p6-202201130.git
+      targetRevision: main
+  - deployStartedAt: "2026-09-14T01:29:00Z"
+    deployedAt: "2026-09-14T01:29:54Z"
+    id: 1
+    initiatedBy:
+      automated: true
+    revision: 201909ebc96ed45e05162430839e911da7e725fc
+    source:
+      helm:
+        valueFiles:
+        - values.yaml
+        - values-prod.yaml
+      path: charts/sa-platform
+      repoURL: https://github.com/AJCG03/gitops-sa-p6-202201130.git
+      targetRevision: main
+  - deployStartedAt: "2026-09-14T01:45:55Z"
+    deployedAt: "2026-09-14T01:46:57Z"
+    id: 2
+    initiatedBy:
+      automated: true
+    revision: 2eaeb0a61096735ec00696d87c1c1c814e93539b
+    source:
+      helm:
+        valueFiles:
+        - values.yaml
+        - values-prod.yaml
+      path: charts/sa-platform
+      repoURL: https://github.com/AJCG03/gitops-sa-p6-202201130.git
+      targetRevision: main
+  - deployStartedAt: "2026-09-14T01:51:41Z"
+    deployedAt: "2026-09-14T01:52:33Z"
+    id: 3
+    initiatedBy: {}
+    revision: 2eaeb0a61096735ec00696d87c1c1c814e93539b
+    source:
+      helm:
+        valueFiles:
+        - values.yaml
+        - values-prod.yaml
+      path: charts/sa-platform
+      repoURL: https://github.com/AJCG03/gitops-sa-p6-202201130.git
+      targetRevision: main
+  - deployStartedAt: "2026-09-14T01:55:59Z"
+    deployedAt: "2026-09-14T01:57:25Z"
+    id: 4
+    initiatedBy: {}
+    revision: 2eaeb0a61096735ec00696d87c1c1c814e93539b
+    source:
+      helm:
+        valueFiles:
+        - values.yaml
+        - values-prod.yaml
+      path: charts/sa-platform
+      repoURL: https://github.com/AJCG03/gitops-sa-p6-202201130.git
+      targetRevision: main
+  - deployStartedAt: "2026-09-14T01:57:55Z"
+    deployedAt: "2026-09-14T01:59:05Z"
+    id: 5
+    initiatedBy:
+      username: admin
+    revision: 2eaeb0a61096735ec00696d87c1c1c814e93539b
+    source:
+      helm:
+        valueFiles:
+        - values.yaml
+        - values-prod.yaml
+      path: charts/sa-platform
+      repoURL: https://github.com/AJCG03/gitops-sa-p6-202201130.git
+      targetRevision: main
+  - deployStartedAt: "2026-09-14T02:06:38Z"
+    deployedAt: "2026-09-14T02:07:42Z"
+    id: 6
+    initiatedBy: {}
+    revision: 2eaeb0a61096735ec00696d87c1c1c814e93539b
+    source:
+      helm:
+        valueFiles:
+        - values.yaml
+        - values-prod.yaml
+      path: charts/sa-platform
+      repoURL: https://github.com/AJCG03/gitops-sa-p6-202201130.git
+      targetRevision: main
+  operationState:
+    finishedAt: "2026-09-14T02:35:25Z"
+    message: successfully synced (all tasks run)
+    operation:
+      initiatedBy:
+        automated: true
+      retry:
+        backoff:
+          duration: 10s
+          factor: 2
+          maxDuration: 5m
+        limit: 5
+      sync:
+        autoHealAttemptsCount: 10
+        prune: true
+        resources:
+        - kind: Service
+          name: datos-service-canary
+        - kind: Service
+          name: api-gateway-canary
+        - kind: Service
+          name: auth-service-stable
+        - group: argoproj.io
+          kind: Rollout
+          name: datos-service
+        - kind: Service
+          name: auth-service-canary
+        - kind: Service
+          name: sensores-service-stable
+        - group: argoproj.io
+          kind: Rollout
+          name: alertas-service
+        - kind: Service
+          name: alertas-service-canary
+        - kind: Service
+          name: api-gateway-stable
+        - kind: Service
+          name: alertas-service-stable
+        - kind: Service
+          name: datos-service-stable
+        - kind: Service
+          name: sensores-service-canary
+        - group: argoproj.io
+          kind: Rollout
+          name: api-gateway
+        - group: argoproj.io
+          kind: Rollout
+          name: auth-service
+        - group: argoproj.io
+          kind: Rollout
+          name: sensores-service
+        revision: 2eaeb0a61096735ec00696d87c1c1c814e93539b
+        source:
+          helm:
+            valueFiles:
+            - values.yaml
+            - values-prod.yaml
+          path: charts/sa-platform
+          repoURL: https://github.com/AJCG03/gitops-sa-p6-202201130.git
+          targetRevision: main
+        syncOptions:
+        - CreateNamespace=true
+        - ServerSideApply=true
+    phase: Succeeded
+    startedAt: "2026-09-14T02:34:52Z"
+    syncResult:
+      resources:
+      - group: ""
+        hookPhase: Running
+        kind: Service
+        message: service/alertas-service-stable serverside-applied
+        name: alertas-service-stable
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Running
+        kind: Service
+        message: service/alertas-service-canary serverside-applied
+        name: alertas-service-canary
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Running
+        kind: Service
+        message: service/api-gateway-stable serverside-applied
+        name: api-gateway-stable
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Running
+        kind: Service
+        message: service/datos-service-canary serverside-applied
+        name: datos-service-canary
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Running
+        kind: Service
+        message: service/datos-service-stable serverside-applied
+        name: datos-service-stable
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Running
+        kind: Service
+        message: service/auth-service-canary serverside-applied
+        name: auth-service-canary
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Running
+        kind: Service
+        message: service/sensores-service-canary serverside-applied
+        name: sensores-service-canary
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Running
+        kind: Service
+        message: service/sensores-service-stable serverside-applied
+        name: sensores-service-stable
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Running
+        kind: Service
+        message: service/api-gateway-canary serverside-applied
+        name: api-gateway-canary
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: ""
+        hookPhase: Running
+        kind: Service
+        message: service/auth-service-stable serverside-applied
+        name: auth-service-stable
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1
+      - group: argoproj.io
+        hookPhase: Running
+        images:
+        - ghcr.io/ajcg03/datos-service:v1.49
+        kind: Rollout
+        message: rollout.argoproj.io/datos-service serverside-applied
+        name: datos-service
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1alpha1
+      - group: argoproj.io
+        hookPhase: Running
+        images:
+        - ghcr.io/ajcg03/alertas-service:v1.49
+        kind: Rollout
+        message: rollout.argoproj.io/alertas-service serverside-applied
+        name: alertas-service
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1alpha1
+      - group: argoproj.io
+        hookPhase: Running
+        images:
+        - ghcr.io/ajcg03/api-gateway:v1.49
+        kind: Rollout
+        message: rollout.argoproj.io/api-gateway serverside-applied
+        name: api-gateway
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1alpha1
+      - group: argoproj.io
+        hookPhase: Running
+        images:
+        - ghcr.io/ajcg03/sensores-service:v1.49
+        kind: Rollout
+        message: rollout.argoproj.io/sensores-service serverside-applied
+        name: sensores-service
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1alpha1
+      - group: argoproj.io
+        hookPhase: Running
+        images:
+        - ghcr.io/ajcg03/auth-service:v1.49
+        kind: Rollout
+        message: rollout.argoproj.io/auth-service serverside-applied
+        name: auth-service
+        namespace: sa-p6
+        status: Synced
+        syncPhase: Sync
+        version: v1alpha1
+      revision: 2eaeb0a61096735ec00696d87c1c1c814e93539b
+      source:
+        helm:
+          valueFiles:
+          - values.yaml
+          - values-prod.yaml
+        path: charts/sa-platform
+        repoURL: https://github.com/AJCG03/gitops-sa-p6-202201130.git
+        targetRevision: main
+  reconciledAt: "2026-09-14T02:35:25Z"
+  resourceHealthSource: appTree
+  resources:
+  - kind: ConfigMap
+    name: k6-load-scripts
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: ConfigMap
+    name: k6-smoke-scripts
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: alertas-service
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: alertas-service-canary
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: alertas-service-stable
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: api-gateway
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: api-gateway-canary
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: api-gateway-stable
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: auth-service
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: auth-service-canary
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: auth-service-stable
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: datos-service
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: datos-service-canary
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: datos-service-stable
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: sensores-service
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: sensores-service-canary
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - kind: Service
+    name: sensores-service-stable
+    namespace: sa-p6
+    status: Synced
+    version: v1
+  - group: argoproj.io
+    kind: AnalysisTemplate
+    name: load-alertas-service
+    namespace: sa-p6
+    status: Synced
+    version: v1alpha1
+  - group: argoproj.io
+    kind: AnalysisTemplate
+    name: load-api-gateway
+    namespace: sa-p6
+    status: Synced
+    version: v1alpha1
+  - group: argoproj.io
+    kind: AnalysisTemplate
+    name: load-auth-service
+    namespace: sa-p6
+    status: Synced
+    version: v1alpha1
+  - group: argoproj.io
+    kind: AnalysisTemplate
+    name: load-datos-service
+    namespace: sa-p6
+    status: Synced
+    version: v1alpha1
+  - group: argoproj.io
+    kind: AnalysisTemplate
+    name: load-sensores-service
+    namespace: sa-p6
+    status: Synced
+    version: v1alpha1
+  - group: argoproj.io
+    kind: AnalysisTemplate
+    name: smoke-alertas-service
+    namespace: sa-p6
+    status: Synced
+    version: v1alpha1
+  - group: argoproj.io
+    kind: AnalysisTemplate
+    name: smoke-api-gateway
+    namespace: sa-p6
+    status: Synced
+    version: v1alpha1
+  - group: argoproj.io
+    kind: AnalysisTemplate
+    name: smoke-auth-service
+    namespace: sa-p6
+    status: Synced
+    version: v1alpha1
+  - group: argoproj.io
+    kind: AnalysisTemplate
+    name: smoke-datos-service
+    namespace: sa-p6
+    status: Synced
+    version: v1alpha1
+  - group: argoproj.io
+    kind: AnalysisTemplate
+    name: smoke-sensores-service
+    namespace: sa-p6
+    status: Synced
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Rollout
+    name: alertas-service
+    namespace: sa-p6
+    status: OutOfSync
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Rollout
+    name: api-gateway
+    namespace: sa-p6
+    status: OutOfSync
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Rollout
+    name: auth-service
+    namespace: sa-p6
+    status: OutOfSync
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Rollout
+    name: datos-service
+    namespace: sa-p6
+    status: OutOfSync
+    version: v1alpha1
+  - group: argoproj.io
+    kind: Rollout
+    name: sensores-service
+    namespace: sa-p6
+    status: OutOfSync
+    version: v1alpha1
+  sourceHydrator: {}
+  sourceType: Helm
+  summary:
+    images:
+    - ghcr.io/ajcg03/alertas-service:v1.49
+    - ghcr.io/ajcg03/api-gateway:v1.49
+    - ghcr.io/ajcg03/auth-service:v1.49
+    - ghcr.io/ajcg03/datos-service:v1.49
+    - ghcr.io/ajcg03/sensores-service:v1.49
+  sync:
+    comparedTo:
+      destination:
+        namespace: sa-p6
+        server: https://kubernetes.default.svc
+      ignoreDifferences:
+      - group: argoproj.io
+        jsonPointers:
+        - /spec/replicas
+        - /status
+        - /metadata/annotations
+        kind: Rollout
+        managedFieldsManagers:
+        - argoproj.io/rollouts-controller
+      - jsonPointers:
+        - /spec/clusterIP
+        - /spec/clusterIPs
+        - /metadata/annotations
+        kind: Service
+      source:
+        helm:
+          valueFiles:
+          - values.yaml
+          - values-prod.yaml
+        path: charts/sa-platform
+        repoURL: https://github.com/AJCG03/gitops-sa-p6-202201130.git
+        targetRevision: main
+    revision: 2eaeb0a61096735ec00696d87c1c1c814e93539b
+    status: OutOfSync

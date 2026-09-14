@@ -28,6 +28,7 @@ spec:
         - /spec/replicas
         - /status
         - /metadata/annotations
+        - /spec/template/spec/containers/0/ports
       managedFieldsManagers:
         - argoproj.io/rollouts-controller
     - group: ""
