@@ -26,11 +26,16 @@ spec:
       kind: Rollout
       jsonPointers:
         - /spec/replicas
+        - /status
+        - /metadata/annotations
+      managedFieldsManagers:
+        - argoproj.io/rollouts-controller
     - group: ""
       kind: Service
       jsonPointers:
         - /spec/clusterIP
         - /spec/clusterIPs
+        - /metadata/annotations
   syncPolicy:
     automated:
       prune: true
