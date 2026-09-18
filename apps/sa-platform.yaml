@@ -36,6 +36,7 @@ spec:
       jsonPointers:
         - /spec/clusterIP
         - /spec/clusterIPs
+        - /spec/selector
         - /metadata/annotations
   syncPolicy:
     automated:
