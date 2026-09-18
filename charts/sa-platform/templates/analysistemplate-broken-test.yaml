@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: broken-test
+  namespace: {{ .Values.global.namespace }}
+spec:
+  args:
+    - name: service-name
+  metrics:
+    - name: always-fail
+      interval: 10s
+      count: 2
+      successCondition: result[0] > 999
+      failureLimit: 1
+      provider:
+        web:
+          url: "http://{{args.service-name}}.{{ .Values.global.namespace }}.svc.cluster.local/health"
+          jsonPath: "{$.status}"

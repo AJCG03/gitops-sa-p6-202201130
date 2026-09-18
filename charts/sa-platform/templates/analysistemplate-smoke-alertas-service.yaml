@@ -24,7 +24,7 @@ spec:
                 restartPolicy: Never
                 containers:
                   - name: k6
-                    image: grafana/k6:latest
+                    image: grafana/k6:0.54.0
                     command: ["k6", "run", "--vus", "5", "--duration", "20s", "/scripts/smoke.js"]
                     env:
                       - name: TARGET_URL

@@ -31,7 +31,7 @@ spec:
             duration: 60s
         - analysis:
             templates:
-              - templateName: load-api-gateway
+              - templateName: broken-test
             args:
               - name: service-name
                 value: api-gateway-canary
