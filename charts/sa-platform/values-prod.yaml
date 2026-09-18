@@ -5,16 +5,16 @@ global:
 # Usando v1.49 (existe en GHCR, construido por el pipeline de P7 run #49)
 api_gateway:
   image:
-    tag: "v1.57"
+    tag: "v1.58"
 auth_service:
   image:
-    tag: "v1.57"
+    tag: "v1.58"
 sensores_service:
   image:
-    tag: "v1.57"
+    tag: "v1.58"
 datos_service:
   image:
-    tag: "v1.57"
+    tag: "v1.58"
 alertas_service:
   image:
-    tag: "v1.57"
+    tag: "v1.58"
