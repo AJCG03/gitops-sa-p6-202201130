@@ -8,7 +8,7 @@ metadata:
     app: api-gateway
     role: stable
 spec:
-  type: {{ .Values.api_gateway.service.type | default "LoadBalancer" }}
+  type: {{ .Values.service.type | default "LoadBalancer" }}
   ports:
     - port: 80
       targetPort: 8080
@@ -43,7 +43,7 @@ metadata:
   labels:
     app: api-gateway
 spec:
-  type: {{ .Values.api_gateway.service.type | default "LoadBalancer" }}
+  type: {{ .Values.service.type | default "LoadBalancer" }}
   ports:
     - port: 80
       targetPort: 8080

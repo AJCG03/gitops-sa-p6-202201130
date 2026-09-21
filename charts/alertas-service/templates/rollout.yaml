@@ -7,7 +7,7 @@ metadata:
     app: alertas-service
     app.kubernetes.io/part-of: sa-platform
 spec:
-  replicas: {{ .Values.alertas_service.replicaCount }}
+  replicas: {{ .Values.replicaCount }}
   revisionHistoryLimit: 5
   selector:
     matchLabels:
@@ -48,8 +48,8 @@ spec:
         - name: ghcr-secret
       containers:
         - name: alertas-service
-          image: "{{ .Values.alertas_service.image.repository }}:{{ .Values.alertas_service.image.tag }}"
-          imagePullPolicy: {{ .Values.alertas_service.image.pullPolicy }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: 3004
           env:
@@ -79,4 +79,4 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 5
           resources:
-            {{- toYaml .Values.alertas_service.resources | nindent 12 }}
+            {{- toYaml .Values.resources | nindent 12 }}

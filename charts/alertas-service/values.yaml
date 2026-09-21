@@ -1,0 +1,14 @@
+global:
+  namespace: "sa-p6"
+replicaCount: 2
+image:
+  repository: "ghcr.io/ajcg03/alertas-service"
+  tag: "v1.62"
+  pullPolicy: "IfNotPresent"
+resources:
+  limits:
+    cpu: "300m"
+    memory: "384Mi"
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
