@@ -1,0 +1,14 @@
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: sa-p6-daily-backup
+  namespace: velero
+spec:
+  schedule: "0 */6 * * *"
+  template:
+    ttl: 168h
+    includedNamespaces:
+      - sa-p6
+    snapshotVolumes: true
+    defaultVolumesToFsBackup: true
+    includeClusterResources: true
