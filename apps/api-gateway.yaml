@@ -1,11 +1,10 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: sa-platform
+  name: api-gateway
   namespace: argocd
   labels:
-    app: sa-platform
-    environment: prod
+    app: api-gateway
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
