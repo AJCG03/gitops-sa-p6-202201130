@@ -1,0 +1,98 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: api-gateway
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: api-gateway
+    app.kubernetes.io/part-of: sa-platform
+spec:
+  replicas: {{ .Values.api_gateway.replicaCount }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: api-gateway
+  strategy:
+    canary:
+      stableService: api-gateway-stable
+      canaryService: api-gateway-canary
+      steps:
+        - setWeight: 20
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: smoke-api-gateway
+            args:
+              - name: service-name
+                value: api-gateway-canary
+        - setWeight: 50
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: load-api-gateway
+            args:
+              - name: service-name
+                value: api-gateway-canary
+        - setWeight: 80
+        - pause:
+            duration: 60s
+        - setWeight: 100
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: api-gateway
+          image: "{{ .Values.api_gateway.image.repository }}:{{ .Values.api_gateway.image.tag }}"
+          imagePullPolicy: {{ .Values.api_gateway.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: AUTH_SERVICE_URL
+              value: "http://auth-service:3000"
+            - name: SENSORES_SERVICE_URL
+              value: "http://sensores-service:3002"
+            - name: DATOS_SERVICE_URL
+              value: "http://datos-service:3003"
+            - name: ALERTAS_SERVICE_URL
+              value: "http://alertas-service:3004"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 101
+            runAsGroup: 101
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+            - name: nginx-tmp
+              mountPath: /tmp
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.api_gateway.resources | nindent 12 }}
+      volumes:
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+        - name: nginx-tmp
+          emptyDir: {}

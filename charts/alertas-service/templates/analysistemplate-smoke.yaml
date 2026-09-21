@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: smoke-alertas-service
+  namespace: {{ .Values.global.namespace }}
+spec:
+  args:
+    - name: service-name
+  metrics:
+    - name: smoke-test
+      interval: 30s
+      count: 3
+      successCondition: result[0] >= 0.95
+      failureLimit: 1
+      provider:
+        job:
+          spec:
+            backoffLimit: 0
+            template:
+              metadata:
+                labels:
+                  app: analysis-smoke
+              spec:
+                restartPolicy: Never
+                containers:
+                  - name: k6
+                    image: grafana/k6:0.54.0
+                    command: ["k6", "run", "--vus", "5", "--duration", "20s", "/scripts/smoke.js"]
+                    env:
+                      - name: TARGET_URL
+                        value: "http://{{`{{args.service-name}}`}}.{{ .Values.global.namespace }}.svc.cluster.local"
+                    volumeMounts:
+                      - name: scripts
+                        mountPath: /scripts
+                volumes:
+                  - name: scripts
+                    configMap:
+                      name: k6-smoke-scripts

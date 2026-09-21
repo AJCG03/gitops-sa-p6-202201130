@@ -1,0 +1,82 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: alertas-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: alertas-service
+    app.kubernetes.io/part-of: sa-platform
+spec:
+  replicas: {{ .Values.alertas_service.replicaCount }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: alertas-service
+  strategy:
+    canary:
+      stableService: alertas-service-stable
+      canaryService: alertas-service-canary
+      steps:
+        - setWeight: 20
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: smoke-alertas-service
+            args:
+              - name: service-name
+                value: alertas-service-canary
+        - setWeight: 50
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: load-alertas-service
+            args:
+              - name: service-name
+                value: alertas-service-canary
+        - setWeight: 80
+        - pause:
+            duration: 60s
+        - setWeight: 100
+  template:
+    metadata:
+      labels:
+        app: alertas-service
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: alertas-service
+          image: "{{ .Values.alertas_service.image.repository }}:{{ .Values.alertas_service.image.tag }}"
+          imagePullPolicy: {{ .Values.alertas_service.image.pullPolicy }}
+          ports:
+            - containerPort: 3004
+          env:
+            - name: MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: url
+            - name: MONGODB_DB
+              value: "AlertasDB"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            initialDelaySeconds: 45
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3004
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.alertas_service.resources | nindent 12 }}

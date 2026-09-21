@@ -1,0 +1,51 @@
+# Service estable
+apiVersion: v1
+kind: Service
+metadata:
+  name: sensores-service-stable
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: sensores-service
+    role: stable
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3002
+      targetPort: 3002
+      name: http
+  selector:
+    app: sensores-service
+---
+# Service canary
+apiVersion: v1
+kind: Service
+metadata:
+  name: sensores-service-canary
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: sensores-service
+    role: canary
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3002
+      targetPort: 3002
+      name: http
+  selector:
+    app: sensores-service
+---
+# Service principal
+apiVersion: v1
+kind: Service
+metadata:
+  name: sensores-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: sensores-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3002
+      targetPort: 3002
+  selector:
+    app: sensores-service

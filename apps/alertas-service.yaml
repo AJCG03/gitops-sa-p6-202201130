@@ -1,10 +1,10 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: alertas-service
+  name: api-gateway
   namespace: argocd
   labels:
-    app: alertas-service
+    app: api-gateway
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -12,31 +12,13 @@ spec:
   source:
     repoURL: https://github.com/AJCG03/gitops-sa-p6-202201130.git
     targetRevision: main
-    path: charts/sa-platform
+    path: charts/alertas-service       # ← su chart específico
     helm:
       valueFiles:
         - values.yaml
-        - values-prod.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: sa-p6
-  ignoreDifferences:
-    - group: argoproj.io
-      kind: Rollout
-      jsonPointers:
-        - /spec/replicas
-        - /status
-        - /metadata/annotations
-        - /spec/template/spec/containers/0/ports
-      managedFieldsManagers:
-        - argoproj.io/rollouts-controller
-    - group: ""
-      kind: Service
-      jsonPointers:
-        - /spec/clusterIP
-        - /spec/clusterIPs
-        - /spec/selector
-        - /metadata/annotations
   syncPolicy:
     automated:
       prune: true
@@ -45,9 +27,3 @@ spec:
       - CreateNamespace=true
       - ServerSideApply=true
       - RespectIgnoreDifferences=true
-    retry:
-      limit: 5
-      backoff:
-        duration: 10s
-        factor: 2
-        maxDuration: 5m
