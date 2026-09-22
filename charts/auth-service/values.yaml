@@ -1,6 +1,6 @@
 global:
   namespace: "sa-p6"
-replicaCount: 2
+replicaCount: 1
 image:
   repository: "ghcr.io/ajcg03/auth-service"
   tag: "v1.62"
