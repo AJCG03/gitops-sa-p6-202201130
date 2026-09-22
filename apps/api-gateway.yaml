@@ -19,6 +19,23 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: sa-p6
+  ignoreDifferences:
+    - group: argoproj.io
+      kind: Rollout
+      jsonPointers:
+        - /spec/replicas
+        - /status
+        - /metadata/annotations
+        - /spec/template/spec/containers/0/ports
+      managedFieldsManagers:
+        - argoproj.io/rollouts-controller
+    - group: ""
+      kind: Service
+      jsonPointers:
+        - /spec/clusterIP
+        - /spec/clusterIPs
+        - /spec/selector
+        - /metadata/annotations
   syncPolicy:
     automated:
       prune: true
