@@ -1,10 +1,10 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: api-gateway
+  name: auth-service
   namespace: argocd
   labels:
-    app: api-gateway
+    app: auth-service
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
