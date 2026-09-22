@@ -44,6 +44,15 @@ spec:
       labels:
         app: auth-service
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: auth-service
+                topologyKey: kubernetes.io/hostname
       imagePullSecrets:
         - name: ghcr-secret
       containers:

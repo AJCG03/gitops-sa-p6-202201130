@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sensores-service-pdb
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: sensores-service
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: sensores-service
