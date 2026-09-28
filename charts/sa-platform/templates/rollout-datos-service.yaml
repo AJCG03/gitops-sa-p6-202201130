@@ -44,6 +44,13 @@ spec:
       labels:
         app: datos-service
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: datos-service
+              topologyKey: kubernetes.io/hostname
       imagePullSecrets:
         - name: ghcr-secret
       containers:

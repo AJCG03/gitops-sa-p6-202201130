@@ -44,6 +44,13 @@ spec:
       labels:
         app: alertas-service
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: alertas-service
+              topologyKey: kubernetes.io/hostname
       imagePullSecrets:
         - name: ghcr-secret
       containers:
