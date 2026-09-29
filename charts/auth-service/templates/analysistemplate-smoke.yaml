@@ -28,7 +28,7 @@ spec:
                     command: ["k6", "run", "--vus", "5", "--duration", "20s", "/scripts/smoke.js"]
                     env:
                       - name: TARGET_URL
-                        value: "http://{{`{{args.service-name}}`}}.{{ .Values.global.namespace }}.svc.cluster.local"
+                        value: "http://{{`{{args.service-name}}`}}.{{ .Values.global.namespace }}.svc.cluster.local:3000"
                     resources:
                       requests:
                         cpu: 50m

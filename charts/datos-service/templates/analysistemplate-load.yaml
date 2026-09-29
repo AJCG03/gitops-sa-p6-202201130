@@ -28,7 +28,7 @@ spec:
                     command: ["k6", "run", "--vus", "20", "--duration", "40s", "/scripts/load.js"]
                     env:
                       - name: TARGET_URL
-                        value: "http://{{`{{args.service-name}}`}}.{{ .Values.global.namespace }}.svc.cluster.local"
+                        value: "http://{{`{{args.service-name}}`}}.{{ .Values.global.namespace }}.svc.cluster.local:3003"
                       - name: ERROR_THRESHOLD
                         value: "0.05"
                       - name: P95_THRESHOLD_MS
