@@ -33,6 +33,13 @@ spec:
                         value: "0.05"
                       - name: P95_THRESHOLD_MS
                         value: "500"
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: 32Mi
+                      limits:
+                        cpu: 100m
+                        memory: 128Mi
                     volumeMounts:
                       - name: scripts
                         mountPath: /scripts
