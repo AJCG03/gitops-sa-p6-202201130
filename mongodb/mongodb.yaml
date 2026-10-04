@@ -1,0 +1,151 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: sa-p6
+  labels:
+    app: mongodb
+    app.kubernetes.io/part-of: sa-platform
+spec:
+  clusterIP: None
+  selector:
+    app: mongodb
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: mongodb-pdb
+  namespace: sa-p6
+  labels:
+    app: mongodb
+    app.kubernetes.io/part-of: sa-platform
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: mongodb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-client
+  namespace: sa-p6
+  labels:
+    app: mongodb
+    app.kubernetes.io/part-of: sa-platform
+spec:
+  selector:
+    app: mongodb
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: sa-p6
+  labels:
+    app: mongodb
+    app.kubernetes.io/part-of: sa-platform
+spec:
+  serviceName: mongodb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+        app.kubernetes.io/part-of: sa-platform
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+        - name: mongodb
+          image: mongo:6.0.19
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-root-credentials
+                  key: username
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-root-credentials
+                  key: password
+          ports:
+            - name: mongodb
+              containerPort: 27017
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          startupProbe:
+            exec:
+              command:
+                - mongosh
+                - --quiet
+                - --eval
+                - 'db.adminCommand({ ping: 1 }).ok'
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 15
+            failureThreshold: 30
+          readinessProbe:
+            exec:
+              command:
+                - mongosh
+                - --quiet
+                - --eval
+                - 'db.adminCommand({ ping: 1 }).ok'
+            initialDelaySeconds: 5
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            exec:
+              command:
+                - mongosh
+                - --quiet
+                - --eval
+                - 'db.adminCommand({ ping: 1 }).ok'
+            initialDelaySeconds: 0
+            periodSeconds: 30
+            timeoutSeconds: 15
+            failureThreshold: 5
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-data
+        labels:
+          app: mongodb
+          app.kubernetes.io/part-of: sa-platform
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: standard-rwo
+        resources:
+          requests:
+            storage: 5Gi

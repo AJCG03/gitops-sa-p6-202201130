@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mongodb
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AJCG03/gitops-sa-p6-202201130.git
+    targetRevision: main
+    path: mongodb
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sa-p6
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
