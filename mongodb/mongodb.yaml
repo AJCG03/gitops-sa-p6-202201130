@@ -24,7 +24,7 @@ metadata:
     app: mongodb
     app.kubernetes.io/part-of: sa-platform
 spec:
-  maxUnavailable: 0
+  maxUnavailable: 1
   selector:
     matchLabels:
       app: mongodb
@@ -107,10 +107,10 @@ spec:
                 - --quiet
                 - --eval
                 - 'db.adminCommand({ ping: 1 }).ok'
-            initialDelaySeconds: 10
-            periodSeconds: 10
-            timeoutSeconds: 15
-            failureThreshold: 30
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 30
+            failureThreshold: 40
           readinessProbe:
             exec:
               command:
@@ -118,10 +118,10 @@ spec:
                 - --quiet
                 - --eval
                 - 'db.adminCommand({ ping: 1 }).ok'
-            initialDelaySeconds: 5
+            initialDelaySeconds: 30
             periodSeconds: 15
-            timeoutSeconds: 10
-            failureThreshold: 5
+            timeoutSeconds: 30
+            failureThreshold: 6
           livenessProbe:
             exec:
               command:
@@ -129,10 +129,10 @@ spec:
                 - --quiet
                 - --eval
                 - 'db.adminCommand({ ping: 1 }).ok'
-            initialDelaySeconds: 0
+            initialDelaySeconds: 60
             periodSeconds: 30
-            timeoutSeconds: 15
-            failureThreshold: 5
+            timeoutSeconds: 30
+            failureThreshold: 6
           volumeMounts:
             - name: mongodb-data
               mountPath: /data/db
