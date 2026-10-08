@@ -182,7 +182,6 @@ rabbitmq:
     pullPolicy: IfNotPresent
   auth:
     username: "app_user"
-    # password se inyecta desde SealedSecret, no aquí
     existingSecret: "rabbitmq-credentials"
   persistence:
     enabled: false
