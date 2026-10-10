@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/part-of: sa-p6-observability
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/AJCG03/gitops-sa-p6-202201130.git
+    targetRevision: main
+    path: charts/observability
+    directory:
+      recurse: true
+      include: '{namespace.yaml,prometheus-rules.yaml,prometheus-alerts.yaml,promtail.yaml,otel-collector.yaml}'
+      exclude: 'values-prometheus.yaml,values-loki.yaml,values-tempo.yaml,values-otel.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

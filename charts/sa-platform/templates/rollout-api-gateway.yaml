@@ -22,19 +22,27 @@ spec:
             duration: 60s
         - analysis:
             templates:
-              - templateName: smoke-api-gateway
+              - templateName: canary-metrics
             args:
               - name: service-name
-                value: api-gateway-canary
+                value: api-gateway
+              - name: error-rate-threshold
+                value: "0.001"
+              - name: p99-latency-threshold
+                value: "0.200"
         - setWeight: 50
         - pause:
             duration: 60s
         - analysis:
             templates:
-              - templateName: load-api-gateway
+              - templateName: canary-metrics
             args:
               - name: service-name
-                value: api-gateway-canary
+                value: api-gateway
+              - name: error-rate-threshold
+                value: "0.001"
+              - name: p99-latency-threshold
+                value: "0.200"
         - setWeight: 80
         - pause:
             duration: 60s
@@ -54,11 +62,59 @@ spec:
       imagePullSecrets:
         - name: ghcr-secret
       containers:
+        # ============================================================
+        # SIDECAR: proxy Go con OpenTelemetry
+        # ============================================================
+        - name: otel-proxy
+          image: "{{ .Values.api_gateway_proxy.image.repository }}:{{ .Values.api_gateway_proxy.image.tag }}"
+          imagePullPolicy: {{ .Values.api_gateway_proxy.image.pullPolicy }}
+          ports:
+            - name: http-proxy
+              containerPort: 8080
+          env:
+            {{- range $k, $v := .Values.api_gateway_proxy.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: proxy-tmp
+              mountPath: /tmp
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.api_gateway_proxy.resources | nindent 12 }}
+
+        # ============================================================
+        # NGINX: enrutamiento (ahora en :8081, solo loopback)
+        # ============================================================
         - name: api-gateway
           image: "{{ .Values.api_gateway.image.repository }}:{{ .Values.api_gateway.image.tag }}"
           imagePullPolicy: {{ .Values.api_gateway.image.pullPolicy }}
           ports:
-            - containerPort: 8080
+            - name: http-nginx
+              containerPort: 8081
           env:
             - name: AUTH_SERVICE_URL
               value: "http://auth-service:3000"
@@ -85,18 +141,20 @@ spec:
           livenessProbe:
             httpGet:
               path: /health
-              port: 8080
+              port: 8081
             initialDelaySeconds: 30
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /health
-              port: 8080
+              port: 8081
             initialDelaySeconds: 5
             periodSeconds: 5
           resources:
             {{- toYaml .Values.api_gateway.resources | nindent 12 }}
       volumes:
+        - name: proxy-tmp
+          emptyDir: {}
         - name: nginx-cache
           emptyDir: {}
         - name: nginx-run

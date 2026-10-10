@@ -1,0 +1,126 @@
+# ═══════════════════════════════════════════════════════════════════
+# Values para el chart oficial de Tempo (grafana/tempo)
+# Modo monolithic (single pod) — ideal para clusters pequeños
+# Optimizado para GKE con nodos e2-small (2 vCPU, 2 GB RAM)
+# ═══════════════════════════════════════════════════════════════════
+
+tempo:
+  # Modo monolithic: 1 pod que hace todo
+  # Alternativas: "distributed" (requiere más recursos)
+  mode: "monolithic"
+
+  # Recursos reducidos
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 768Mi
+
+  # ─────────────────────────────────────────────
+  # Retención de trazas: 3 días
+  # ─────────────────────────────────────────────
+  retention: 72h
+
+  # Configuración de almacenamiento local
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+      wal:
+        path: /var/tempo/wal
+
+  # Persistencia con PVC
+  persistence:
+    enabled: true
+    storageClassName: standard-rwo
+    size: 5Gi
+    accessModes:
+      - ReadWriteOnce
+
+  # ─────────────────────────────────────────────
+  # Receiver OTLP habilitado
+  # ─────────────────────────────────────────────
+  # El chart de Tempo ya expone OTLP por defecto:
+  #   - gRPC: 4317
+  #   - HTTP: 4318
+  # El OTel Collector enviará trazas a tempo.observability.svc:4317
+
+  # ─────────────────────────────────────────────
+  # Service: exponer los puertos necesarios
+  # ─────────────────────────────────────────────
+  service:
+    type: ClusterIP
+    # Puerto HTTP de Tempo (para Grafana datasource)
+    httpPort: 3200
+    # Puerto gRPC interno
+    grpcPort: 9095
+    # Puerto OTLP gRPC (receptor de trazas)
+    otlpGrpcPort: 4317
+    # Puerto OTLP HTTP (receptor de trazas)
+    otlpHttpPort: 4318
+
+  # ─────────────────────────────────────────────
+  # Configuración adicional de Tempo
+  # ─────────────────────────────────────────────
+  config: |
+    server:
+      http_listen_port: 3200
+      grpc_listen_port: 9095
+      log_level: warn
+
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+
+    ingester:
+      trace_idle_period: 30s
+      max_block_bytes: 1073741824
+      max_block_duration: 5m
+
+    compactor:
+      compaction:
+        block_retention: 72h
+
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /var/tempo/traces
+        wal:
+          path: /var/tempo/wal
+
+    metrics_generator:
+      registry:
+        external_labels:
+          source: tempo
+      storage:
+        path: /var/tempo/generator/wal
+
+    overrides:
+      max_bytes_per_trace: 5000000  # 5MB cap
+
+# ─────────────────────────────────────────────
+# ServiceMonitor para Prometheus
+# ─────────────────────────────────────────────
+serviceMonitor:
+  enabled: true
+  labels:
+    release: kube-prometheus-stack
+  interval: 30s
+
+# ─────────────────────────────────────────────
+# Deshabilitar componentes que no usamos
+# ─────────────────────────────────────────────
+traces:
+  jaeger:
+    enabled: false
+  zipkin:
+    enabled: false

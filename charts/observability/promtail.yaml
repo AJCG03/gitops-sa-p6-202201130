@@ -1,0 +1,262 @@
+# ═══════════════════════════════════════════════════════════════════
+# Promtail — Agente de recolección de logs
+# Se despliega como DaemonSet (1 pod por nodo)
+# Parsea JSON de los servicios y extrae trace_id, span_id, service, level
+# ═══════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────
+# 1. ServiceAccount
+# ─────────────────────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: promtail
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: promtail
+    app.kubernetes.io/part-of: sa-p6-observability
+---
+# ─────────────────────────────────────────────
+# 2. ClusterRole (permisos para leer logs de pods)
+# ─────────────────────────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: promtail
+  labels:
+    app.kubernetes.io/name: promtail
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - nodes/proxy
+      - services
+      - endpoints
+      - pods
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["extensions"]
+    resources:
+      - ingresses
+    verbs: ["get", "list", "watch"]
+---
+# ─────────────────────────────────────────────
+# 3. ClusterRoleBinding
+# ─────────────────────────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: promtail
+  labels:
+    app.kubernetes.io/name: promtail
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: promtail
+subjects:
+  - kind: ServiceAccount
+    name: promtail
+    namespace: observability
+---
+# ─────────────────────────────────────────────
+# 4. ConfigMap con la configuración de Promtail
+# ─────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: promtail
+data:
+  promtail.yaml: |
+    server:
+      http_listen_port: 9080
+      grpc_listen_port: 0
+      log_level: warn
+
+    positions:
+      filename: /run/promtail/positions.yaml
+
+    clients:
+      - url: http://loki.observability.svc.cluster.local:3100/loki/api/v1/push
+        # Reintentos si Loki no está disponible
+        backoff_config:
+          min_period: 500ms
+          max_period: 5m
+          max_retries: 10
+        batchwait: 1s
+        batchsize: 1048576  # 1MB
+
+    # ─────────────────────────────────────────────
+    # Scrape configs: recolecta logs de los pods
+    # ─────────────────────────────────────────────
+    scrape_configs:
+      # Scrape 1: todos los pods en sa-p6 (nuestros microservicios)
+      - job_name: sa-p6-pods
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - sa-p6
+
+        pipeline_stages:
+          # 1. Parsear CRI (formato de logs de containerd)
+          - cri: {}
+
+          # 2. Intentar parsear JSON (nuestros servicios emiten JSON)
+          - json:
+              expressions:
+                level: level
+                service: service
+                trace_id: trace_id
+                span_id: span_id
+                message: message
+                timestamp: timestamp
+
+          # 3. Extraer labels para Loki
+          - labels:
+              level:
+              service:
+              trace_id:
+              span_id:
+
+          # 4. Timestamp del JSON si existe
+          - timestamp:
+              source: timestamp
+              format: RFC3339Nano
+              fallback_formats:
+                - RFC3339
+                - UnixMs
+
+          # 5. Output final
+          - output:
+              source: message
+
+        relabel_configs:
+          # Solo procesar pods que NO estén en observability
+          # (para no recolectar logs del propio stack de observabilidad)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: keep
+            regex: sa-p6
+
+          # Agregar labels útiles
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            target_label: container
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            target_label: app
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: node
+
+          # Path del log en el nodo
+          - source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
+            target_label: __path__
+            separator: /
+            replacement: /var/log/pods/*$1/*.log
+
+      # Scrape 2: logs de sistema (opcional, deshabilitado)
+      # Descomenta si quieres recolectar logs de kube-system
+      # - job_name: system
+      #   static_configs:
+      #     - targets:
+      #         - localhost
+      #       labels:
+      #         job: varlogs
+      #         __path__: /var/log/*log
+---
+# ─────────────────────────────────────────────
+# 5. DaemonSet de Promtail
+# ─────────────────────────────────────────────
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: promtail
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: promtail
+    app.kubernetes.io/part-of: sa-p6-observability
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: promtail
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: promtail
+    spec:
+      serviceAccountName: promtail
+      # Tolerations para correr en todos los nodos, incluso con taints
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+
+      # Recursos reducidos
+      containers:
+        - name: promtail
+          image: grafana/promtail:3.1.1
+          imagePullPolicy: IfNotPresent
+
+          args:
+            - -config.file=/etc/promtail/promtail.yaml
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+
+          ports:
+            - containerPort: 9080
+              name: http-metrics
+              protocol: TCP
+
+          volumeMounts:
+            # Configuración
+            - name: config
+              mountPath: /etc/promtail
+            # Positions (para no releer logs ya procesados)
+            - name: run
+              mountPath: /run/promtail
+            # Logs de los pods
+            - name: varlog
+              mountPath: /var/log
+              readOnly: true
+            # Logs de los contenedores (symlinks)
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+      volumes:
+        - name: config
+          configMap:
+            name: promtail-config
+        - name: run
+          emptyDir: {}
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers

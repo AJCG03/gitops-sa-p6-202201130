@@ -33,6 +33,37 @@ api_gateway:
     capabilities:
       drop: ["ALL"]
 
+# ⬇️ NUEVO ⬇️
+# ============================================
+# API GATEWAY PROXY (sidecar OTel)
+# ============================================
+api_gateway_proxy:
+  image:
+    repository: "ghcr.io/ajcg03/api-gateway-proxy"
+    tag: "v1.0.0"          # será sobrescrito por values-<env>.yaml
+    pullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+  env:
+    PORT: "8080"
+    NGINX_UPSTREAM_URL: "http://localhost:8081"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector.observability.svc.cluster.local:4317"
+    OTEL_SERVICE_NAME: "api-gateway"
+  # securityContext obligatorio por política Kyverno
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+# ⬆️ NUEVO ⬆️
+
 # ============================================
 # AUTH SERVICE
 # ============================================

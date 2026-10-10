@@ -22,19 +22,27 @@ spec:
             duration: 60s
         - analysis:
             templates:
-              - templateName: smoke-alertas-service
+              - templateName: canary-metrics
             args:
               - name: service-name
-                value: alertas-service-canary
+                value: alertas-service
+              - name: error-rate-threshold
+                value: "0.005"
+              - name: p99-latency-threshold
+                value: "0.400"
         - setWeight: 50
         - pause:
             duration: 60s
         - analysis:
             templates:
-              - templateName: load-alertas-service
+              - templateName: canary-metrics
             args:
               - name: service-name
-                value: alertas-service-canary
+                value: alertas-service
+              - name: error-rate-threshold
+                value: "0.005"
+              - name: p99-latency-threshold
+                value: "0.400"
         - setWeight: 80
         - pause:
             duration: 60s

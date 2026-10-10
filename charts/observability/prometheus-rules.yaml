@@ -1,0 +1,43 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sa-p6-slo-rules
+  namespace: observability
+  labels:
+    release: kube-prometheus-stack
+    app.kubernetes.io/part-of: sa-p6-observability
+spec:
+  groups:
+    - name: slo-sensores-availability
+      interval: 30s
+      rules:
+        - record: sli:sensores_availability:ratio5m
+          expr: |
+            sum(rate(http_requests_total{service="sensores-service",status!~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{service="sensores-service"}[5m]))
+        - record: slo:sensores_availability:budget_consumed30d
+          expr: |
+            (
+              1 - (
+                sum(rate(http_requests_total{service="sensores-service",status!~"5.."}[30d]))
+                /
+                sum(rate(http_requests_total{service="sensores-service"}[30d]))
+              )
+            ) / 0.001
+
+    - name: slo-datos-latency
+      interval: 30s
+      rules:
+        - record: sli:datos_latency_p99:seconds5m
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(http_request_duration_seconds_bucket{service="datos-service",method="GET"}[5m])) by (le)
+            )
+        - record: slo:datos_latency:budget_consumed7d
+          expr: |
+            (
+              sum(rate(http_request_duration_seconds_bucket{service="datos-service",method="GET",le="0.25"}[7d]))
+              /
+              sum(rate(http_request_duration_seconds_count{service="datos-service",method="GET"}[7d]))
+            ) / 0.01

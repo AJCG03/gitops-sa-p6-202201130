@@ -22,19 +22,27 @@ spec:
             duration: 60s
         - analysis:
             templates:
-              - templateName: smoke-datos-service
+              - templateName: canary-metrics
             args:
               - name: service-name
-                value: datos-service-canary
+                value: datos-service
+              - name: error-rate-threshold
+                value: "0.001"
+              - name: p99-latency-threshold
+                value: "0.250"
         - setWeight: 50
         - pause:
             duration: 60s
         - analysis:
             templates:
-              - templateName: load-datos-service
+              - templateName: canary-metrics
             args:
               - name: service-name
-                value: datos-service-canary
+                value: datos-service
+              - name: error-rate-threshold
+                value: "0.001"
+              - name: p99-latency-threshold
+                value: "0.250"
         - setWeight: 80
         - pause:
             duration: 60s

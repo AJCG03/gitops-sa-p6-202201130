@@ -1,0 +1,252 @@
+# ═══════════════════════════════════════════════════════════════════
+# OpenTelemetry Collector — Deployment
+# Recibe telemetría de los servicios vía OTLP (4317/4318)
+# Exporta a Prometheus (métricas), Loki (logs) y Tempo (trazas)
+# ═══════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────
+# 1. ServiceAccount
+# ─────────────────────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-collector
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/part-of: sa-p6-observability
+---
+# ─────────────────────────────────────────────
+# 2. ConfigMap con la configuración del Collector
+# ─────────────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: otel-collector
+data:
+  config.yaml: |
+    receivers:
+      # OTLP receiver: recibe métricas, logs y trazas de los servicios
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      # Memory limiter: protege al Collector de OOM
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 256
+        spike_limit_mib: 64
+
+      # Batch: agrupa datos antes de exportar (eficiencia)
+      batch:
+        send_batch_size: 64
+        send_batch_max_size: 128
+        timeout: 5s
+
+      # Resource: agrega atributos comunes
+      resource:
+        attributes:
+          - key: cluster
+            value: practica6-cluster
+            action: upsert
+          - key: environment
+            value: production
+            action: upsert
+
+    exporters:
+      # Prometheus exporter: expone métricas en :8889 para que Prometheus las scrapee
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+        namespace: otel
+        const_labels:
+          cluster: practica6-cluster
+
+      # OTLP exporter a Tempo (trazas)
+      otlp/tempo:
+        endpoint: tempo.observability.svc.cluster.local:4317
+        tls:
+          insecure: true
+
+      # Loki exporter (logs)
+      loki:
+        endpoint: http://loki.observability.svc.cluster.local:3100/loki/api/v1/push
+        labels:
+          attributes:
+            service: "service.name"
+            level: "level"
+            trace_id: "trace_id"
+            span_id: "span_id"
+        # Reintentos
+        retry_on_failure:
+          enabled: true
+          initial_interval: 5s
+          max_interval: 30s
+          max_elapsed_time: 300s
+
+      # Debug exporter (útil para troubleshooting, deshabilitar en prod)
+      debug:
+        verbosity: basic
+
+    service:
+      pipelines:
+        # Pipeline de trazas: OTLP → processadores → Tempo
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [otlp/tempo, debug]
+
+        # Pipeline de métricas: OTLP → processadores → Prometheus
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [prometheus]
+
+        # Pipeline de logs: OTLP → processadores → Loki
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [loki]
+
+      telemetry:
+        logs:
+          level: warn
+        metrics:
+          address: 0.0.0.0:8888
+---
+# ─────────────────────────────────────────────
+# 3. Deployment del Collector
+# ─────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/part-of: sa-p6-observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: otel-collector
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: otel-collector
+    spec:
+      serviceAccountName: otel-collector
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.120.0
+          imagePullPolicy: IfNotPresent
+
+          args:
+            - --config=/etc/otel/config.yaml
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+            - name: prometheus
+              containerPort: 8889
+              protocol: TCP
+            - name: metrics
+              containerPort: 8888
+              protocol: TCP
+
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otel
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 10
+            periodSeconds: 30
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-config
+---
+# ─────────────────────────────────────────────
+# 4. Service (para que los servicios envíen telemetría)
+# ─────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/part-of: sa-p6-observability
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: otel-collector
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+    - name: prometheus
+      port: 8889
+      targetPort: 8889
+      protocol: TCP
+---
+# ─────────────────────────────────────────────
+# 5. ServiceMonitor (para que Prometheus scrapee las métricas del Collector)
+# ─────────────────────────────────────────────
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: otel-collector
+  namespace: observability
+  labels:
+    release: kube-prometheus-stack
+    app.kubernetes.io/name: otel-collector
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: otel-collector
+  endpoints:
+    - port: prometheus
+      interval: 30s
+      path: /metrics

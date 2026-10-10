@@ -1,0 +1,94 @@
+# ═══════════════════════════════════════════════════════════════════
+# PrometheusRule: Alertas por consumo de presupuesto de error
+#
+# Estas alertas NO son por umbral instantáneo. Se disparan cuando el
+# ritmo de consumo del presupuesto de error (burn rate) sugiere que
+# el SLO se agotará antes del final de la ventana.
+#
+# Cada alerta:
+#   - Está asociada a un SLO específico
+#   - Enlaza a un runbook de atención
+#   - Justifica por qué amerita intervención humana
+# ═══════════════════════════════════════════════════════════════════
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sa-p6-slo-alerts
+  namespace: observability
+  labels:
+    release: kube-prometheus-stack
+    app.kubernetes.io/part-of: sa-p6-observability
+    app.kubernetes.io/component: slo-alerts
+spec:
+  groups:
+    - name: slo-error-budget-alerts
+      interval: 30s
+      rules:
+        # ═══════════════════════════════════════════════════════════════
+        # ALERTA 1: SensoresErrorBudgetBurn (SLO-01)
+        #
+        # SLO-01: Disponibilidad de sensores-service 99.9% / 30d
+        # Presupuesto: 0.1% = 0.001
+        #
+        # La alerta se dispara cuando el presupuesto consumido supera
+        # el 50% en la ventana de 30d.
+        #
+        # ¿Por qué amerita intervención humana?
+        #   Un consumo del 50% del presupuesto mensual en cualquier
+        #   momento del mes indica una tendencia insostenible. Si no
+        #   se investiga, el SLO se agotará antes de fin de mes.
+        # ═══════════════════════════════════════════════════════════════
+        - alert: SensoresErrorBudgetBurn
+          expr: slo:sensores_availability:budget_consumed30d > 0.5
+          for: 10m
+          labels:
+            severity: warning
+            slo: sensores-availability
+            service: sensores-service
+            runbook: "https://github.com/AJCG03/gitops-sa-p6-202201130/blob/main/P10/runbooks/sensores-availability.md"
+          annotations:
+            summary: "Presupuesto de error de sensores-service al 50%"
+            description: |
+              El presupuesto de error del SLO de disponibilidad de
+              sensores-service está al {{ $value | humanizePercentage }}
+              consumido en la ventana de 30d.
+              
+              Si la tendencia continúa, el presupuesto se agotará antes
+              de fin de mes.
+              
+              Revisar el runbook para diagnóstico.
+            runbook_url: "https://github.com/AJCG03/gitops-sa-p6-202201130/blob/main/P10/runbooks/sensores-availability.md"
+
+        # ═══════════════════════════════════════════════════════════════
+        # ALERTA 2: DatosLatencyBudgetBurn (SLO-02)
+        #
+        # SLO-02: Latencia p99 de datos-service < 250ms / 7d
+        # Presupuesto: 1% de peticiones pueden exceder 250ms
+        #
+        # La alerta se dispara cuando el presupuesto consumido supera
+        # el 50% en la ventana de 7d.
+        #
+        # ¿Por qué amerita intervención humana?
+        #   El consumo del 50% en 7 días es un indicador temprano de
+        #   degradación sostenida. Un operador debe investigar queries
+        #   lentas o regresiones del canary antes de que el SLO se viole.
+        # ═══════════════════════════════════════════════════════════════
+        - alert: DatosLatencyBudgetBurn
+          expr: slo:datos_latency:budget_consumed7d > 0.5
+          for: 10m
+          labels:
+            severity: warning
+            slo: datos-latency
+            service: datos-service
+            runbook: "https://github.com/AJCG03/gitops-sa-p6-202201130/blob/main/P10/runbooks/datos-latency.md"
+          annotations:
+            summary: "Presupuesto de latencia de datos-service al 50%"
+            description: |
+              El presupuesto de error del SLO de latencia de datos-service
+              está al {{ $value | humanizePercentage }} consumido en la
+              ventana de 7d.
+              
+              Si la tendencia continúa, el SLO se violará en pocos días.
+              
+              Revisar el runbook para diagnóstico.
+            runbook_url: "https://github.com/AJCG03/gitops-sa-p6-202201130/blob/main/P10/runbooks/datos-latency.md"

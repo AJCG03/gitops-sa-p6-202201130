@@ -1,0 +1,149 @@
+# ═══════════════════════════════════════════════════════════════════
+# Values para kube-prometheus-stack
+# Optimizado para GKE con nodos e2-small (2 vCPU, 2 GB RAM)
+# ═══════════════════════════════════════════════════════════════════
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    retentionSize: "8GB"
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 800m
+        memory: 1Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: standard-rwo
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 10Gi
+    ruleSelector:
+      matchLabels:
+        release: kube-prometheus-stack
+    serviceMonitorSelector:
+      matchLabels:
+        release: kube-prometheus-stack
+    podMonitorSelector:
+      matchLabels:
+        release: kube-prometheus-stack
+    serviceMonitorNamespaceSelector: {}
+    podMonitorNamespaceSelector: {}
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+    externalLabels:
+      cluster: practica6-cluster
+      region: us-central1
+
+alertmanager:
+  alertmanagerSpec:
+    replicas: 1
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: standard-rwo
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 2Gi
+
+grafana:
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+  persistence:
+    enabled: true
+    storageClassName: standard-rwo
+    size: 2Gi
+    accessModes:
+      - ReadWriteOnce
+  service:
+    type: ClusterIP
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+
+nodeExporter:
+  enabled: true
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+kubeStateMetrics:
+  enabled: true
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  admissionWebhooks:
+    enabled: true
+    patch:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          cpu: 50m
+          memory: 64Mi
+
+thanosRuler:
+  enabled: false
+
+defaultRules:
+  create: true
+  rules:
+    etcd: false
+    kubeProxy: false
+    kubeApiserverSlos: false
+
+
+# ─────────────────────────────────────────────
+# Configuración de Alertmanager
+# ─────────────────────────────────────────────
+alertmanager:
+  # ... (lo que ya tengas) ...
+
+  # Habilitar el descubrimiento de AlertmanagerConfig
+  alertmanagerConfigSelector:
+    matchLabels:
+      release: kube-prometheus-stack
+  alertmanagerConfigNamespaceSelector:
+    matchNames:
+      - observability
