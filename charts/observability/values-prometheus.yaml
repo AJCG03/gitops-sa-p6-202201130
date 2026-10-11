@@ -1,19 +1,18 @@
 # ═══════════════════════════════════════════════════════════════════
-# Values para kube-prometheus-stack
-# Optimizado para GKE con nodos e2-small (2 vCPU, 2 GB RAM)
+# Values para kube-prometheus-stack - Ultra Minimizado para GKE e2-small
 # ═══════════════════════════════════════════════════════════════════
 
 prometheus:
   prometheusSpec:
-    retention: 15d
-    retentionSize: "8GB"
+    retention: 2d
+    retentionSize: "2GB"
     resources:
       requests:
-        cpu: 100m
-        memory: 256Mi
+        cpu: 50m
+        memory: 128Mi
       limits:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 250m
+        memory: 256Mi
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -22,7 +21,7 @@ prometheus:
             - ReadWriteOnce
           resources:
             requests:
-              storage: 10Gi
+              storage: 5Gi
     ruleSelector:
       matchLabels:
         release: kube-prometheus-stack
@@ -34,8 +33,8 @@ prometheus:
         release: kube-prometheus-stack
     serviceMonitorNamespaceSelector: {}
     podMonitorNamespaceSelector: {}
-    scrapeInterval: 30s
-    evaluationInterval: 30s
+    scrapeInterval: 60s
+    evaluationInterval: 60s
     externalLabels:
       cluster: practica6-cluster
       region: us-central1
@@ -45,11 +44,11 @@ alertmanager:
     replicas: 1
     resources:
       requests:
-        cpu: 50m
-        memory: 64Mi
+        cpu: 10m
+        memory: 32Mi
       limits:
-        cpu: 200m
-        memory: 128Mi
+        cpu: 100m
+        memory: 64Mi
     storage:
       volumeClaimTemplate:
         spec:
@@ -58,8 +57,7 @@ alertmanager:
             - ReadWriteOnce
           resources:
             requests:
-              storage: 2Gi
-  # Habilitar el descubrimiento de AlertmanagerConfig
+              storage: 1Gi
   alertmanagerConfigSelector:
     matchLabels:
       release: kube-prometheus-stack
@@ -71,15 +69,15 @@ grafana:
   enabled: true
   resources:
     requests:
-      cpu: 50m
-      memory: 64Mi
+      cpu: 20m
+      memory: 32Mi
     limits:
-      cpu: 300m
-      memory: 256Mi
+      cpu: 100m
+      memory: 128Mi
   persistence:
     enabled: true
     storageClassName: standard-rwo
-    size: 2Gi
+    size: 1Gi
     accessModes:
       - ReadWriteOnce
   service:
@@ -95,40 +93,40 @@ nodeExporter:
   enabled: true
   resources:
     requests:
-      cpu: 20m
-      memory: 32Mi
+      cpu: 10m
+      memory: 16Mi
     limits:
-      cpu: 100m
-      memory: 64Mi
+      cpu: 50m
+      memory: 32Mi
 
 kubeStateMetrics:
   enabled: true
   resources:
     requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 50m
+      memory: 64Mi
+
+prometheusOperator:
+  resources:
+    requests:
       cpu: 20m
       memory: 64Mi
     limits:
       cpu: 100m
       memory: 128Mi
-
-prometheusOperator:
-  resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
-    limits:
-      cpu: 200m
-      memory: 256Mi
   admissionWebhooks:
     enabled: true
     patch:
       resources:
         requests:
-          cpu: 10m
-          memory: 32Mi
+          cpu: 5m
+          memory: 16Mi
         limits:
-          cpu: 50m
-          memory: 64Mi
+          cpu: 25m
+          memory: 32Mi
 
 thanosRuler:
   enabled: false
