@@ -9,11 +9,11 @@ prometheus:
     retentionSize: "8GB"
     resources:
       requests:
-        cpu: 200m
-        memory: 512Mi
+        cpu: 100m
+        memory: 256Mi
       limits:
-        cpu: 800m
-        memory: 1Gi
+        cpu: 500m
+        memory: 512Mi
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -59,6 +59,13 @@ alertmanager:
           resources:
             requests:
               storage: 2Gi
+  # Habilitar el descubrimiento de AlertmanagerConfig
+  alertmanagerConfigSelector:
+    matchLabels:
+      release: kube-prometheus-stack
+  alertmanagerConfigNamespaceSelector:
+    matchNames:
+      - observability
 
 grafana:
   enabled: true
@@ -132,18 +139,3 @@ defaultRules:
     etcd: false
     kubeProxy: false
     kubeApiserverSlos: false
-
-
-# ─────────────────────────────────────────────
-# Configuración de Alertmanager
-# ─────────────────────────────────────────────
-alertmanager:
-  # ... (lo que ya tengas) ...
-
-  # Habilitar el descubrimiento de AlertmanagerConfig
-  alertmanagerConfigSelector:
-    matchLabels:
-      release: kube-prometheus-stack
-  alertmanagerConfigNamespaceSelector:
-    matchNames:
-      - observability
