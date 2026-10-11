@@ -95,11 +95,11 @@ spec:
               containerPort: 27017
           resources:
             requests:
-              cpu: 50m
+              cpu: 25m
               memory: 64Mi
             limits:
-              cpu: 500m
-              memory: 1Gi
+              cpu: 200m
+              memory: 256Mi
           startupProbe:
             exec:
               command:
