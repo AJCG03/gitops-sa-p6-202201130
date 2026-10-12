@@ -20,7 +20,6 @@ spec:
   metrics:
     # ═══════════════════════════════════════════════════════════════
     # Métrica 1: Tasa de error 5xx
-    # Usa el nombre OTel: http_server_request_duration_seconds_count
     # ═══════════════════════════════════════════════════════════════
     - name: error-rate
       interval: 1m
