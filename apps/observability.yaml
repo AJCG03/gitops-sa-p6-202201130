@@ -16,9 +16,7 @@ spec:
     targetRevision: main
     path: charts/observability
     directory:
-      recurse: true
-      include: '{namespace.yaml,prometheus-rules.yaml,prometheus-alerts.yaml,promtail.yaml,otel-collector.yaml}'
-      exclude: 'values-prometheus.yaml,values-loki.yaml,values-tempo.yaml,values-otel.yaml'
+      recurse: false
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
