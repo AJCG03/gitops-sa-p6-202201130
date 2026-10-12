@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: sa-platform
 spec:
   replicas: {{ .Values.replicaCount }}
-  revisionHistoryLimit: 5
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: api-gateway
@@ -19,25 +19,16 @@ spec:
       steps:
         - setWeight: 20
         - pause:
-            duration: 60s
+            duration: 30s
         - analysis:
             templates:
-              - templateName: smoke-api-gateway
+              - templateName: prometheus-api-gateway
             args:
               - name: service-name
                 value: api-gateway-canary
         - setWeight: 50
         - pause:
-            duration: 60s
-        - analysis:
-            templates:
-              - templateName: load-api-gateway
-            args:
-              - name: service-name
-                value: api-gateway-canary
-        - setWeight: 80
-        - pause:
-            duration: 60s
+            duration: 30s
         - setWeight: 100
   template:
     metadata:
@@ -63,13 +54,13 @@ spec:
             - containerPort: 8080
           env:
             - name: AUTH_SERVICE_URL
-              value: "http://auth-service:3000"
+              value: "http://auth-service-stable:3000"
             - name: SENSORES_SERVICE_URL
-              value: "http://sensores-service:3002"
+              value: "http://sensores-service-stable:3002"
             - name: DATOS_SERVICE_URL
-              value: "http://datos-service:3003"
+              value: "http://datos-service-stable:3003"
             - name: ALERTAS_SERVICE_URL
-              value: "http://alertas-service:3004"
+              value: "http://alertas-service-stable:3004"
           securityContext:
             runAsNonRoot: true
             runAsUser: 101

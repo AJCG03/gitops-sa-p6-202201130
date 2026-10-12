@@ -1,46 +1,28 @@
-# ═══════════════════════════════════════════════════════════════════
-# Values para el chart oficial de Loki (grafana/loki)
-# Modo singleBinary: 1 pod que hace todo (ideal para clusters pequeños)
-# Optimizado para GKE con nodos e2-small (2 vCPU, 2 GB RAM)
-# ═══════════════════════════════════════════════════════════════════
-
-# ─────────────────────────────────────────────
-# Modo de despliegue: singleBinary (todo en 1 pod)
-# ─────────────────────────────────────────────
 deploymentMode: SingleBinary
 
 loki:
-  # Configuración principal de Loki
-  auth_enabled: false    # Sin autenticación (cluster interno)
-
+  auth_enabled: false
   commonConfig:
-    replication_factor: 1  # Single replica, no necesita replicación
-
+    replication_factor: 1
   storage:
-    type: filesystem       # Almacenamiento local (PVC)
+    type: filesystem
     filesystem:
       chunks_directory: /var/loki/chunks
       rules_directory: /var/loki/rules
-
-  # Retención de logs: 7 días
   limits_config:
-    retention_period: 168h        # 7 días
-    max_query_lookback: 168h
+    retention_period: 24h        # ← de 168h a 24h
+    max_query_lookback: 24h
     reject_old_samples: true
-    reject_old_samples_max_age: 168h
-    ingestion_rate_mb: 10
-    ingestion_burst_size_mb: 20
-    max_streams_per_user: 5000
-    max_entries_limit_per_query: 10000
-
-  # Compactor: aplica la retención
+    reject_old_samples_max_age: 24h
+    ingestion_rate_mb: 5         # ← de 10 a 5
+    ingestion_burst_size_mb: 10  # ← de 20 a 10
+    max_streams_per_user: 2000   # ← de 5000 a 2000
+    max_entries_limit_per_query: 5000  # ← de 10000 a 5000
   compactor:
     working_directory: /var/loki/compactor
     retention_enabled: true
     delete_request_store: filesystem
     compaction_interval: 10m
-
-  # Schema de almacenamiento
   schemaConfig:
     configs:
       - from: "2024-01-01"
@@ -50,46 +32,31 @@ loki:
         index:
           prefix: index_
           period: 24h
-
-  # Configuración del servidor
   server:
     http_listen_port: 3100
     grpc_listen_port: 9095
     log_level: warn
-
-  # Analytics deshabilitado (no envía telemetría)
   analytics:
     reporting_enabled: false
 
-# ─────────────────────────────────────────────
-# Modo singleBinary: 1 réplica, recursos reducidos para e2-small
-# ─────────────────────────────────────────────
 singleBinary:
   replicas: 1
-
   resources:
     requests:
       cpu: 50m
       memory: 96Mi
     limits:
-      cpu: 250m
+      cpu: 200m
       memory: 256Mi
-
-  # Persistencia para chunks e índices
   persistence:
     enabled: true
     storageClass: standard-rwo
-    size: 5Gi
+    size: 3Gi              # ← de 5Gi a 3Gi
     accessModes:
       - ReadWriteOnce
-
-  # Tolerations y nodeSelector (opcional, deja por defecto)
   nodeSelector: {}
   tolerations: []
 
-# ─────────────────────────────────────────────
-# Deshabilitar componentes que NO usamos en singleBinary
-# ─────────────────────────────────────────────
 backend:
   replicas: 0
 read:
@@ -97,33 +64,20 @@ read:
 write:
   replicas: 0
 
-# ─────────────────────────────────────────────
-# Deshabilitar componentes opcionales
-# ─────────────────────────────────────────────
 lokiCanary:
   enabled: false
 
 test:
   enabled: false
 
-# ─────────────────────────────────────────────
-# Gateway (nginx) deshabilitado — accedemos directo al service
-# ─────────────────────────────────────────────
 gateway:
   enabled: false
 
-# ─────────────────────────────────────────────
-# ServiceMonitor: para que Prometheus scrapee métricas de Loki
-# ─────────────────────────────────────────────
 serviceMonitor:
   enabled: true
   labels:
-    release: kube-prometheus-stack    # ← debe coincidir con serviceMonitorSelector
+    release: kube-prometheus-stack
   interval: 30s
 
-# ─────────────────────────────────────────────
-# Promtail: NO lo instalamos aquí, lo hacemos aparte como DaemonSet
-# para tener control total sobre el parsing de JSON
-# ─────────────────────────────────────────────
 promtail:
   enabled: false

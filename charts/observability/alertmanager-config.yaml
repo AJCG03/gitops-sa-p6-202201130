@@ -1,11 +1,3 @@
-# ═══════════════════════════════════════════════════════════════════
-# AlertmanagerConfig: configuración de Alertmanager
-#
-# Define receivers y rutas para las alertas.
-# En producción, aquí irían Slack, PagerDuty, email, etc.
-# Para esta práctica, usamos un webhook de log (Alertmanager loguea
-# las notificaciones al stdout).
-# ═══════════════════════════════════════════════════════════════════
 apiVersion: monitoring.coreos.com/v1alpha1
 kind: AlertmanagerConfig
 metadata:
@@ -15,30 +7,20 @@ metadata:
     release: kube-prometheus-stack
     app.kubernetes.io/part-of: sa-p6-observability
 spec:
-  # ─────────────────────────────────────────────
-  # Ruta principal: cómo se enrutan las alertas
-  # ─────────────────────────────────────────────
   route:
-    # Agrupar alertas por servicio y SLO (evita spam si hay varias)
     groupBy:
       - service
       - slo
-    groupWait: 30s          # Esperar 30s antes de enviar el primer grupo
-    groupInterval: 5m       # Esperar 5min antes de enviar actualizaciones
-    repeatInterval: 4h      # Reenviar si sigue activa cada 4h
-    receiver: "log-receiver"
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 4h
+    receiver: "null"
     routes:
-      # Ruta específica para alertas de SLO (severity=warning)
       - match:
           severity: warning
-        receiver: "log-receiver"
+        receiver: "null"
         continue: true
 
-  # ─────────────────────────────────────────────
-  # Inhibit rules: silenciar alertas derivadas
-  # ─────────────────────────────────────────────
-  # Ej: si el SLO de datos-service ya está violado, no queremos
-  # que se disparen también las alertas de burn rate secundarias.
   inhibitRules:
     - sourceMatch:
         - name: slo
@@ -50,17 +32,7 @@ spec:
           matchType: "="
       equal:
         - service
-      # Si una alerta crítica ya está activa, silenciar las de warning
-      # (esto es opcional y depende de tu política de severidades)
-      # En esta práctica no hay alertas críticas, así que se deja vacío
 
-  # ─────────────────────────────────────────────
-  # Receivers: a dónde se envían las alertas
-  # ─────────────────────────────────────────────
   receivers:
-    - name: "log-receiver"
-      # Webhook a un endpoint local que solo loguea
-      # (útil para la práctica, no envía notificaciones externas)
-      webhookConfigs:
-        - url: "http://localhost:9095/api/v2/alerts"
-          sendResolved: true
+    # "null" receiver: no envía nada, pero Alertmanager loguea en stdout
+    - name: "null"

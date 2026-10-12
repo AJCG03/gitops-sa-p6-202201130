@@ -1,262 +1,216 @@
-# ═══════════════════════════════════════════════════════════════════
-# Promtail — Agente de recolección de logs
-# Se despliega como DaemonSet (1 pod por nodo)
-# Parsea JSON de los servicios y extrae trace_id, span_id, service, level
-# ═══════════════════════════════════════════════════════════════════
-
-# ─────────────────────────────────────────────
-# 1. ServiceAccount
-# ─────────────────────────────────────────────
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: promtail
+  name: otel-collector
   namespace: observability
   labels:
-    app.kubernetes.io/name: promtail
+    app.kubernetes.io/name: otel-collector
     app.kubernetes.io/part-of: sa-p6-observability
 ---
-# ─────────────────────────────────────────────
-# 2. ClusterRole (permisos para leer logs de pods)
-# ─────────────────────────────────────────────
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: promtail
-  labels:
-    app.kubernetes.io/name: promtail
-rules:
-  - apiGroups: [""]
-    resources:
-      - nodes
-      - nodes/proxy
-      - services
-      - endpoints
-      - pods
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["extensions"]
-    resources:
-      - ingresses
-    verbs: ["get", "list", "watch"]
----
-# ─────────────────────────────────────────────
-# 3. ClusterRoleBinding
-# ─────────────────────────────────────────────
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: promtail
-  labels:
-    app.kubernetes.io/name: promtail
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: promtail
-subjects:
-  - kind: ServiceAccount
-    name: promtail
-    namespace: observability
----
-# ─────────────────────────────────────────────
-# 4. ConfigMap con la configuración de Promtail
-# ─────────────────────────────────────────────
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: promtail-config
+  name: otel-collector-config
   namespace: observability
   labels:
-    app.kubernetes.io/name: promtail
+    app.kubernetes.io/name: otel-collector
 data:
-  promtail.yaml: |
-    server:
-      http_listen_port: 9080
-      grpc_listen_port: 0
-      log_level: warn
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
 
-    positions:
-      filename: /run/promtail/positions.yaml
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 96
+        spike_limit_mib: 32
 
-    clients:
-      - url: http://loki.observability.svc.cluster.local:3100/loki/api/v1/push
-        # Reintentos si Loki no está disponible
-        backoff_config:
-          min_period: 500ms
-          max_period: 5m
-          max_retries: 10
-        batchwait: 1s
-        batchsize: 1048576  # 1MB
+      batch:
+        send_batch_size: 32
+        send_batch_max_size: 64
+        timeout: 5s
 
-    # ─────────────────────────────────────────────
-    # Scrape configs: recolecta logs de los pods
-    # ─────────────────────────────────────────────
-    scrape_configs:
-      # Scrape 1: todos los pods en sa-p6 (nuestros microservicios)
-      - job_name: sa-p6-pods
-        kubernetes_sd_configs:
-          - role: pod
-            namespaces:
-              names:
-                - sa-p6
+      resource:
+        attributes:
+          - key: cluster
+            value: practica6-cluster
+            action: upsert
+          - key: environment
+            value: production
+            action: upsert
 
-        pipeline_stages:
-          # 1. Parsear CRI (formato de logs de containerd)
-          - cri: {}
+    exporters:
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+        namespace: otel
+        const_labels:
+          cluster: practica6-cluster
 
-          # 2. Intentar parsear JSON (nuestros servicios emiten JSON)
-          - json:
-              expressions:
-                level: level
-                service: service
-                trace_id: trace_id
-                span_id: span_id
-                message: message
-                timestamp: timestamp
+      otlp/tempo:
+        endpoint: tempo.observability.svc.cluster.local:4317
+        tls:
+          insecure: true
 
-          # 3. Extraer labels para Loki
-          - labels:
-              level:
-              service:
-              trace_id:
-              span_id:
+      loki:
+        endpoint: http://loki.observability.svc.cluster.local:3100/loki/api/v1/push
+        labels:
+          attributes:
+            service: "service.name"
+            level: "level"
+            trace_id: "trace_id"
+            span_id: "span_id"
+        retry_on_failure:
+          enabled: true
+          initial_interval: 5s
+          max_interval: 30s
+          max_elapsed_time: 300s
 
-          # 4. Timestamp del JSON si existe
-          - timestamp:
-              source: timestamp
-              format: RFC3339Nano
-              fallback_formats:
-                - RFC3339
-                - UnixMs
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
 
-          # 5. Output final
-          - output:
-              source: message
+    service:
+      extensions: [health_check]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [otlp/tempo]
 
-        relabel_configs:
-          # Solo procesar pods que NO estén en observability
-          # (para no recolectar logs del propio stack de observabilidad)
-          - source_labels: [__meta_kubernetes_namespace]
-            action: keep
-            regex: sa-p6
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [prometheus]
 
-          # Agregar labels útiles
-          - source_labels: [__meta_kubernetes_pod_name]
-            target_label: pod
-          - source_labels: [__meta_kubernetes_pod_container_name]
-            target_label: container
-          - source_labels: [__meta_kubernetes_namespace]
-            target_label: namespace
-          - source_labels: [__meta_kubernetes_pod_label_app]
-            target_label: app
-          - source_labels: [__meta_kubernetes_pod_node_name]
-            target_label: node
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, batch]
+          exporters: [loki]
 
-          # Path del log en el nodo
-          - source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
-            target_label: __path__
-            separator: /
-            replacement: /var/log/pods/*$1/*.log
-
-      # Scrape 2: logs de sistema (opcional, deshabilitado)
-      # Descomenta si quieres recolectar logs de kube-system
-      # - job_name: system
-      #   static_configs:
-      #     - targets:
-      #         - localhost
-      #       labels:
-      #         job: varlogs
-      #         __path__: /var/log/*log
+      telemetry:
+        logs:
+          level: warn
+        metrics:
+          address: 0.0.0.0:8888
 ---
-# ─────────────────────────────────────────────
-# 5. DaemonSet de Promtail
-# ─────────────────────────────────────────────
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
-  name: promtail
+  name: otel-collector
   namespace: observability
   labels:
-    app.kubernetes.io/name: promtail
+    app.kubernetes.io/name: otel-collector
     app.kubernetes.io/part-of: sa-p6-observability
 spec:
+  replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: promtail
+      app.kubernetes.io/name: otel-collector
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: promtail
+        app.kubernetes.io/name: otel-collector
     spec:
-      serviceAccountName: promtail
-      # Tolerations para correr en todos los nodos, incluso con taints
-      tolerations:
-        - key: node-role.kubernetes.io/master
-          operator: Exists
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
-
-      # Recursos reducidos
+      serviceAccountName: otel-collector
       containers:
-        - name: promtail
-          image: grafana/promtail:3.1.1
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.120.0
           imagePullPolicy: IfNotPresent
-
           args:
-            - -config.file=/etc/promtail/promtail.yaml
-
+            - --config=/etc/otel/config.yaml
           resources:
             requests:
-              cpu: 50m
+              cpu: 20m
               memory: 64Mi
             limits:
-              cpu: 200m
-              memory: 256Mi
-
-          env:
-            - name: HOSTNAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-
+              cpu: 100m
+              memory: 128Mi
           ports:
-            - containerPort: 9080
-              name: http-metrics
+            - name: otlp-grpc
+              containerPort: 4317
               protocol: TCP
-
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+            - name: prometheus
+              containerPort: 8889
+              protocol: TCP
+            - name: metrics
+              containerPort: 8888
+              protocol: TCP
+            - name: healthz
+              containerPort: 13133
+              protocol: TCP
           volumeMounts:
-            # Configuración
             - name: config
-              mountPath: /etc/promtail
-            # Positions (para no releer logs ya procesados)
-            - name: run
-              mountPath: /run/promtail
-            # Logs de los pods
-            - name: varlog
-              mountPath: /var/log
-              readOnly: true
-            # Logs de los contenedores (symlinks)
-            - name: varlibdockercontainers
-              mountPath: /var/lib/docker/containers
-              readOnly: true
-
+              mountPath: /etc/otel
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 5
+            periodSeconds: 10
           securityContext:
-            readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop:
                 - ALL
-
+            readOnlyRootFilesystem: true
       volumes:
         - name: config
           configMap:
-            name: promtail-config
-        - name: run
-          emptyDir: {}
-        - name: varlog
-          hostPath:
-            path: /var/log
-        - name: varlibdockercontainers
-          hostPath:
-            path: /var/lib/docker/containers
+            name: otel-collector-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: otel-collector
+    app.kubernetes.io/part-of: sa-p6-observability
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: otel-collector
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+    - name: prometheus
+      port: 8889
+      targetPort: 8889
+      protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: otel-collector
+  namespace: observability
+  labels:
+    release: kube-prometheus-stack
+    app.kubernetes.io/name: otel-collector
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: otel-collector
+  endpoints:
+    - port: prometheus
+      interval: 30s
+      path: /metrics

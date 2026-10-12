@@ -33,19 +33,3 @@ spec:
       name: http
   selector:
     app: sensores-service
----
-# Service principal
-apiVersion: v1
-kind: Service
-metadata:
-  name: sensores-service
-  namespace: {{ .Values.global.namespace }}
-  labels:
-    app: sensores-service
-spec:
-  type: ClusterIP
-  ports:
-    - port: 3002
-      targetPort: 3002
-  selector:
-    app: sensores-service
