@@ -16,7 +16,8 @@ spec:
     targetRevision: main
     path: charts/observability
     directory:
-      recurse: false
+      recurse: true
+      include: '{namespace.yaml,otel-collector.yaml,prometheus-alerts.yaml,prometheus-rules.yaml,promtail.yaml}'
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
