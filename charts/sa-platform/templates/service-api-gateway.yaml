@@ -1,4 +1,4 @@
-# Service estable
+# Service estable (recibe tráfico de usuarios)
 apiVersion: v1
 kind: Service
 metadata:
@@ -16,7 +16,7 @@ spec:
   selector:
     app: api-gateway
 ---
-# Service canary
+# Service canary (recibe tráfico de prueba)
 apiVersion: v1
 kind: Service
 metadata:
@@ -31,5 +31,21 @@ spec:
     - port: 80
       targetPort: 8080
       name: http
+  selector:
+    app: api-gateway
+---
+# Service principal (compatibilidad con lo que ya tienes desplegado)
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: api-gateway
+spec:
+  type: {{ .Values.api_gateway.service.type | default "LoadBalancer" }}
+  ports:
+    - port: 80
+      targetPort: 8080
   selector:
     app: api-gateway

@@ -7,8 +7,8 @@ metadata:
     app: datos-service
     app.kubernetes.io/part-of: sa-platform
 spec:
-  replicas: {{ .Values.replicaCount }}
-  revisionHistoryLimit: 2
+  replicas: {{ .Values.datos_service.replicaCount }}
+  revisionHistoryLimit: 5
   selector:
     matchLabels:
       app: datos-service
@@ -19,16 +19,33 @@ spec:
       steps:
         - setWeight: 20
         - pause:
-            duration: 30s
+            duration: 60s
         - analysis:
             templates:
-              - templateName: prometheus-datos-service
+              - templateName: canary-metrics
             args:
               - name: service-name
-                value: datos-service-canary
+                value: datos-service
+              - name: error-rate-threshold
+                value: "0.001"
+              - name: p99-latency-threshold
+                value: "0.250"
         - setWeight: 50
         - pause:
-            duration: 30s
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: canary-metrics
+            args:
+              - name: service-name
+                value: datos-service
+              - name: error-rate-threshold
+                value: "0.001"
+              - name: p99-latency-threshold
+                value: "0.250"
+        - setWeight: 80
+        - pause:
+            duration: 60s
         - setWeight: 100
   template:
     metadata:
@@ -37,19 +54,17 @@ spec:
     spec:
       affinity:
         podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchLabels:
-                    app: datos-service
-                topologyKey: kubernetes.io/hostname
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: datos-service
+              topologyKey: kubernetes.io/hostname
       imagePullSecrets:
         - name: ghcr-secret
       containers:
         - name: datos-service
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ .Values.datos_service.image.repository }}:{{ .Values.datos_service.image.tag }}"
+          imagePullPolicy: {{ .Values.datos_service.image.pullPolicy }}
           ports:
             - containerPort: 3003
           env:
@@ -79,4 +94,4 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 5
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml .Values.datos_service.resources | nindent 12 }}

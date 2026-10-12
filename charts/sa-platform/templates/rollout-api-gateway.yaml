@@ -1,0 +1,163 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: api-gateway
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: api-gateway
+    app.kubernetes.io/part-of: sa-platform
+spec:
+  replicas: {{ .Values.api_gateway.replicaCount }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: api-gateway
+  strategy:
+    canary:
+      stableService: api-gateway-stable
+      canaryService: api-gateway-canary
+      steps:
+        - setWeight: 20
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: canary-metrics
+            args:
+              - name: service-name
+                value: api-gateway
+              - name: error-rate-threshold
+                value: "0.001"
+              - name: p99-latency-threshold
+                value: "0.200"
+        - setWeight: 50
+        - pause:
+            duration: 60s
+        - analysis:
+            templates:
+              - templateName: canary-metrics
+            args:
+              - name: service-name
+                value: api-gateway
+              - name: error-rate-threshold
+                value: "0.001"
+              - name: p99-latency-threshold
+                value: "0.200"
+        - setWeight: 80
+        - pause:
+            duration: 60s
+        - setWeight: 100
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: api-gateway
+              topologyKey: kubernetes.io/hostname
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        # ============================================================
+        # SIDECAR: proxy Go con OpenTelemetry
+        # ============================================================
+        - name: otel-proxy
+          image: "{{ .Values.api_gateway_proxy.image.repository }}:{{ .Values.api_gateway_proxy.image.tag }}"
+          imagePullPolicy: {{ .Values.api_gateway_proxy.image.pullPolicy }}
+          ports:
+            - name: http-proxy
+              containerPort: 8080
+          env:
+            {{- range $k, $v := .Values.api_gateway_proxy.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: proxy-tmp
+              mountPath: /tmp
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.api_gateway_proxy.resources | nindent 12 }}
+
+        # ============================================================
+        # NGINX: enrutamiento (ahora en :8081, solo loopback)
+        # ============================================================
+        - name: api-gateway
+          image: "{{ .Values.api_gateway.image.repository }}:{{ .Values.api_gateway.image.tag }}"
+          imagePullPolicy: {{ .Values.api_gateway.image.pullPolicy }}
+          ports:
+            - name: http-nginx
+              containerPort: 8081
+          env:
+            - name: AUTH_SERVICE_URL
+              value: "http://auth-service:3000"
+            - name: SENSORES_SERVICE_URL
+              value: "http://sensores-service:3002"
+            - name: DATOS_SERVICE_URL
+              value: "http://datos-service:3003"
+            - name: ALERTAS_SERVICE_URL
+              value: "http://alertas-service:3004"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 101
+            runAsGroup: 101
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+            - name: nginx-tmp
+              mountPath: /tmp
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.api_gateway.resources | nindent 12 }}
+      volumes:
+        - name: proxy-tmp
+          emptyDir: {}
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+        - name: nginx-tmp
+          emptyDir: {}

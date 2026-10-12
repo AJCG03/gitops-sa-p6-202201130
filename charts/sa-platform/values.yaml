@@ -1,0 +1,213 @@
+# ============================================
+# CONFIGURACIÓN GLOBAL
+# ============================================
+global:
+  namespace: "sa-p6"
+  logLevel: "info"
+  environment: "base"
+
+# ============================================
+# API GATEWAY
+# ============================================
+api_gateway:
+  replicaCount: 1                    # ← de 2 a 1
+  image:
+    repository: "ghcr.io/ajcg03/api-gateway"
+    tag: "v1.0.0"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: ClusterIP                  # ← de LoadBalancer a ClusterIP (ahorra $ y un balanceador)
+  resources:
+    limits:
+      cpu: "200m"                    # ← de 300m a 200m
+      memory: "256Mi"                # ← de 384Mi a 256Mi
+    requests:
+      cpu: "50m"                     # ← de 100m a 50m
+      memory: "64Mi"                 # ← de 128Mi a 64Mi
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+# ============================================
+# API GATEWAY PROXY (sidecar OTel)
+# ============================================
+api_gateway_proxy:
+  image:
+    repository: "ghcr.io/ajcg03/api-gateway-proxy"
+    tag: "v1.0.0"
+    pullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: "150m"                    # ← de 200m a 150m
+      memory: "192Mi"                # ← de 256Mi a 192Mi
+    requests:
+      cpu: "30m"                     # ← de 50m a 30m
+      memory: "48Mi"                 # ← de 64Mi a 48Mi
+  env:
+    PORT: "8080"
+    NGINX_UPSTREAM_URL: "http://localhost:8081"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector.observability.svc.cluster.local:4317"
+    OTEL_SERVICE_NAME: "api-gateway"
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+# ============================================
+# AUTH SERVICE
+# ============================================
+auth_service:
+  replicaCount: 1                    # ← de 2 a 1
+  image:
+    repository: "ghcr.io/ajcg03/auth-service"
+    tag: "v1.0.0"
+    pullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: "200m"                    # ← de 300m a 200m
+      memory: "256Mi"                # ← de 384Mi a 256Mi
+    requests:
+      cpu: "50m"                     # ← de 100m a 50m
+      memory: "64Mi"                 # ← de 128Mi a 64Mi
+  hpa:
+    enabled: false                   # ← DESACTIVADO (con 1 réplica no aplica)
+    minReplicas: 1
+    maxReplicas: 2
+    cpuThreshold: 80
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+# ============================================
+# SENSORES SERVICE
+# ============================================
+sensores_service:
+  replicaCount: 1                    # ← de 2 a 1
+  image:
+    repository: "ghcr.io/ajcg03/sensores-service"
+    tag: "v1.0.0"
+    pullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+    cpuThreshold: 80
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+# ============================================
+# DATOS SERVICE
+# ============================================
+datos_service:
+  replicaCount: 1                    # ← de 2 a 1
+  image:
+    repository: "ghcr.io/ajcg03/datos-service"
+    tag: "v1.0.0"
+    pullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+    cpuThreshold: 80
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+# ============================================
+# ALERTAS SERVICE
+# ============================================
+alertas_service:
+  replicaCount: 1                    # ← de 2 a 1
+  image:
+    repository: "ghcr.io/ajcg03/alertas-service"
+    tag: "v1.0.0"
+    pullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+  hpa:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+    cpuThreshold: 80
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+
+# ============================================
+# ROLLOUT — CONFIGURACIÓN CANARY
+# ============================================
+rollout:
+  canary:
+    steps:
+      - setWeight: 20
+      - pause:
+          duration: 30s              # ← de 60s a 30s
+      - analysis:
+          templateName: canary-metrics
+      - setWeight: 50
+      - pause:
+          duration: 30s              # ← de 60s a 30s
+      - analysis:
+          templateName: canary-metrics
+      - setWeight: 80
+      - pause:
+          duration: 30s              # ← de 60s a 30s
+      - setWeight: 100
+
+# ============================================
+# RABBITMQ (dependencia)
+# ============================================
+rabbitmq:
+  enabled: false                     # ← DESACTIVADO si no lo usas (ahorra un pod)
+  # ... (el resto igual si algún día lo activas)
+
+# ============================================
+# DESHABILITAR BASES INTERNAS
+# ============================================
+mongodb:
+  enabled: false
+mysql:
+  enabled: false

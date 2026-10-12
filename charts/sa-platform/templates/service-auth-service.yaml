@@ -1,4 +1,4 @@
-# Service estable
+# Service estable (recibe tráfico de usuarios)
 apiVersion: v1
 kind: Service
 metadata:
@@ -16,7 +16,7 @@ spec:
   selector:
     app: auth-service
 ---
-# Service canary
+# Service canary (recibe tráfico de prueba)
 apiVersion: v1
 kind: Service
 metadata:
@@ -31,5 +31,21 @@ spec:
     - port: 3000
       targetPort: 3000
       name: http
+  selector:
+    app: auth-service
+---
+# Service principal (compatibilidad)
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: auth-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
   selector:
     app: auth-service

@@ -1,0 +1,64 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: canary-metrics
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/part-of: sa-platform
+    app.kubernetes.io/component: canary-analysis
+spec:
+  args:
+    - name: service-name
+      description: "Nombre del servicio en las métricas (service label)"
+    - name: prometheus-address
+      value: "http://prometheus-operated.observability.svc.cluster.local:9090"
+    - name: error-rate-threshold
+      value: "0.001"
+    - name: p99-latency-threshold
+      value: "0.250"
+
+  metrics:
+    # ═══════════════════════════════════════════════════════════════
+    # Métrica 1: Tasa de error 5xx
+    # ═══════════════════════════════════════════════════════════════
+    - name: error-rate
+      interval: 1m
+      count: 5
+      successCondition: result[0] < {{args.error-rate-threshold}}
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: "{{args.prometheus-address}}"
+          query: |
+            sum(
+              rate(http_requests_total{
+                service="{{args.service-name}}",
+                status=~"5.."
+              }[1m])
+            )
+            /
+            sum(
+              rate(http_requests_total{
+                service="{{args.service-name}}"
+              }[1m])
+            )
+
+    # ═══════════════════════════════════════════════════════════════
+    # Métrica 2: Latencia p99
+    # ═══════════════════════════════════════════════════════════════
+    - name: p99-latency
+      interval: 1m
+      count: 5
+      successCondition: result[0] < {{args.p99-latency-threshold}}
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: "{{args.prometheus-address}}"
+          query: |
+            histogram_quantile(0.99,
+              sum(
+                rate(http_request_duration_seconds_bucket{
+                  service="{{args.service-name}}"
+                }[1m])
+              ) by (le)
+            )

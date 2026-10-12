@@ -1,0 +1,18 @@
+global:
+  environment: "staging"
+  logLevel: "info"
+
+rollout:
+  canary:
+    steps:
+      - setWeight: 30
+      - pause:
+          duration: 60s
+      - analysis:
+          templateName: smoke-analysis
+      - setWeight: 60
+      - pause:
+          duration: 60s
+      - analysis:
+          templateName: load-analysis
+      - setWeight: 100
