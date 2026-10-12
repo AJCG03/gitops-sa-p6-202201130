@@ -11,7 +11,7 @@ spec:
     - name: service-name
       description: "Nombre del servicio en las métricas (service label)"
     - name: prometheus-address
-      value: "http://prometheus-operated.observability.svc.cluster.local:9090"
+      value: "http://kube-prometheus-stack-prometheus.observability.svc.cluster.local:9090"
     - name: error-rate-threshold
       value: "0.001"
     - name: p99-latency-threshold
@@ -20,6 +20,7 @@ spec:
   metrics:
     # ═══════════════════════════════════════════════════════════════
     # Métrica 1: Tasa de error 5xx
+    # Usa el nombre OTel: http_server_request_duration_seconds_count
     # ═══════════════════════════════════════════════════════════════
     - name: error-rate
       interval: 1m
@@ -31,15 +32,15 @@ spec:
           address: "{{args.prometheus-address}}"
           query: |
             sum(
-              rate(http_requests_total{
-                service="{{args.service-name}}",
-                status=~"5.."
+              rate(http_server_request_duration_seconds_count{
+                service_name="{{args.service-name}}",
+                http_response_status_code=~"5.."
               }[1m])
             )
             /
             sum(
-              rate(http_requests_total{
-                service="{{args.service-name}}"
+              rate(http_server_request_duration_seconds_count{
+                service_name="{{args.service-name}}"
               }[1m])
             )
 
@@ -57,8 +58,8 @@ spec:
           query: |
             histogram_quantile(0.99,
               sum(
-                rate(http_request_duration_seconds_bucket{
-                  service="{{args.service-name}}"
+                rate(http_server_request_duration_seconds_bucket{
+                  service_name="{{args.service-name}}"
                 }[1m])
               ) by (le)
             )
