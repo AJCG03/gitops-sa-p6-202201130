@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════
+# Values para el chart oficial de Loki (grafana/loki)
+# Modo singleBinary: 1 pod que hace todo
+# Optimizado para GKE con nodos e2-standard-2 (2 vCPU, 8 GB RAM)
+# ═══════════════════════════════════════════════════════════════════
+
 deploymentMode: SingleBinary
 
 loki:
@@ -10,14 +16,14 @@ loki:
       chunks_directory: /var/loki/chunks
       rules_directory: /var/loki/rules
   limits_config:
-    retention_period: 24h        # ← de 168h a 24h
+    retention_period: 24h
     max_query_lookback: 24h
     reject_old_samples: true
     reject_old_samples_max_age: 24h
-    ingestion_rate_mb: 5         # ← de 10 a 5
-    ingestion_burst_size_mb: 10  # ← de 20 a 10
-    max_streams_per_user: 2000   # ← de 5000 a 2000
-    max_entries_limit_per_query: 5000  # ← de 10000 a 5000
+    ingestion_rate_mb: 5
+    ingestion_burst_size_mb: 10
+    max_streams_per_user: 2000
+    max_entries_limit_per_query: 5000
   compactor:
     working_directory: /var/loki/compactor
     retention_enabled: true
@@ -51,19 +57,57 @@ singleBinary:
   persistence:
     enabled: true
     storageClass: standard-rwo
-    size: 3Gi              # ← de 5Gi a 3Gi
+    size: 3Gi
     accessModes:
       - ReadWriteOnce
   nodeSelector: {}
   tolerations: []
 
+# Deshabilitar TODOS los componentes distribuidos
 backend:
   replicas: 0
 read:
   replicas: 0
 write:
   replicas: 0
+ingester:
+  replicas: 0
+querier:
+  replicas: 0
+queryFrontend:
+  replicas: 0
+queryScheduler:
+  replicas: 0
+distributor:
+  replicas: 0
+compactor:
+  replicas: 0
+indexGateway:
+  replicas: 0
+bloomCompactor:
+  replicas: 0
+bloomGateway:
+  replicas: 0
+ruler:
+  enabled: false
+  replicas: 0
 
+# ═══════════════════════════════════════════════════════════════════
+#  CRÍTICO: DESACTIVAR LOS CACHES
+#  Sin esto, Helm crea pods memcached con 10 GB de RAM que nunca
+#  caben en nodos e2-standard-2 y quedan en Pending eternamente.
+# ═══════════════════════════════════════════════════════════════════
+chunksCache:
+  enabled: false
+  replicas: 0
+  allocatedMemory: 0
+
+resultsCache:
+  enabled: false
+  replicas: 0
+  allocatedMemory: 0
+
+# Deshabilitar otros componentes opcionales
 lokiCanary:
   enabled: false
 
