@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════
-# Values para kube-prometheus-stack - Ultra Minimizado para GKE e2-small
+# Values para kube-prometheus-stack — Ultra Minimizado y Corregido (e2-small)
 # ═══════════════════════════════════════════════════════════════════
 
 prometheus:
@@ -12,7 +12,7 @@ prometheus:
         memory: 128Mi
       limits:
         cpu: 250m
-        memory: 256Mi
+        memory: 384Mi # Aumentado de 256Mi a 384Mi para evitar OOMKilled
     storageSpec:
       volumeClaimTemplate:
         spec:
