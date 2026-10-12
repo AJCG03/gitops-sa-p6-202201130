@@ -1,14 +1,39 @@
+# ═══════════════════════════════════════════════════════════════════
+# Values para kube-prometheus-stack — Optimizado para e2-standard-2
+# ═══════════════════════════════════════════════════════════════════
+
+# Desactivar exporters que no necesitas (ahorra varios pods)
+kubeApiServer:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+coreDns:
+  enabled: false
+kubeDns:
+  enabled: false
+
+# ─────────────────────────────────────────────
+# Prometheus
+# ─────────────────────────────────────────────
 prometheus:
   prometheusSpec:
     retention: 2d
     retentionSize: "2GB"
+    # ⚠️ FIX P10: Prometheus se OOMKilleaba con 384Mi.
+    # Subimos a 768Mi para que pueda recuperar la WAL y operar.
     resources:
       requests:
-        cpu: 50m
-        memory: 128Mi
+        cpu: 100m
+        memory: 256Mi
       limits:
-        cpu: 250m
-        memory: 384Mi
+        cpu: 500m
+        memory: 768Mi
     storageSpec:
       volumeClaimTemplate:
         spec:
@@ -18,9 +43,7 @@ prometheus:
           resources:
             requests:
               storage: 4Gi
-    # ↓ AÑADIR: límites de bloque para nodos pequeños
     walCompression: true
-    # ↓ AÑADIR: evitar queries que devuelvan 30d de raw data
     query:
       maxSamples: 50000000
       timeout: 2m
@@ -41,6 +64,9 @@ prometheus:
       cluster: practica6-cluster
       region: us-central1
 
+# ─────────────────────────────────────────────
+# Alertmanager
+# ─────────────────────────────────────────────
 alertmanager:
   alertmanagerSpec:
     replicas: 1
@@ -67,6 +93,9 @@ alertmanager:
     matchNames:
       - observability
 
+# ─────────────────────────────────────────────
+# Grafana
+# ─────────────────────────────────────────────
 grafana:
   enabled: true
   resources:
@@ -91,6 +120,9 @@ grafana:
       labelValue: "1"
       searchNamespace: ALL
 
+# ─────────────────────────────────────────────
+# Node Exporter
+# ─────────────────────────────────────────────
 nodeExporter:
   enabled: true
   resources:
@@ -101,6 +133,9 @@ nodeExporter:
       cpu: 50m
       memory: 32Mi
 
+# ─────────────────────────────────────────────
+# Kube State Metrics
+# ─────────────────────────────────────────────
 kubeStateMetrics:
   enabled: true
   resources:
@@ -111,6 +146,9 @@ kubeStateMetrics:
       cpu: 50m
       memory: 64Mi
 
+# ─────────────────────────────────────────────
+# Prometheus Operator
+# ─────────────────────────────────────────────
 prometheusOperator:
   resources:
     requests:
@@ -119,11 +157,15 @@ prometheusOperator:
     limits:
       cpu: 100m
       memory: 128Mi
+  # Desactivar admission webhooks (ahorra un pod completo)
   admissionWebhooks:
-    enabled: false    # ← DESACTIVADO para ahorrar recursos
+    enabled: false
   tls:
-    enabled: false    # ← DESACTIVADO
+    enabled: false
 
+# ─────────────────────────────────────────────
+# Componentes que no usamos
+# ─────────────────────────────────────────────
 thanosRuler:
   enabled: false
 

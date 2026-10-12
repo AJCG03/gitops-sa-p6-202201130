@@ -56,14 +56,15 @@ data:
         tls:
           insecure: true
 
+      # ⚠️ FIX P10: El exporter 'loki' en OTel 0.120.0 NO acepta 'labels:'
+      # La clave válida es 'default_labels_enabled' o simplemente no poner nada.
       loki:
         endpoint: http://loki.observability.svc.cluster.local:3100/loki/api/v1/push
-        labels:
-          attributes:
-            service: "service.name"
-            level: "level"
-            trace_id: "trace_id"
-            span_id: "span_id"
+        default_labels_enabled:
+          exporter: false
+          job: true
+          instance: true
+          level: true
         retry_on_failure:
           enabled: true
           initial_interval: 5s
