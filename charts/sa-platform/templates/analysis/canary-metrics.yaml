@@ -24,22 +24,22 @@ spec:
     - name: error-rate
       interval: 1m
       count: 5
-      successCondition: result[0] < {{args.error-rate-threshold}}
+      successCondition: result[0] < {{ "{{" }}args.error-rate-threshold{{ "}}" }}
       failureLimit: 1
       provider:
         prometheus:
-          address: "{{args.prometheus-address}}"
+          address: "{{ "{{" }}args.prometheus-address{{ "}}" }}"
           query: |
             sum(
               rate(http_server_request_duration_seconds_count{
-                service_name="{{args.service-name}}",
+                service_name="{{ "{{" }}args.service-name{{ "}}" }}",
                 http_response_status_code=~"5.."
               }[1m])
             )
             /
             sum(
               rate(http_server_request_duration_seconds_count{
-                service_name="{{args.service-name}}"
+                service_name="{{ "{{" }}args.service-name{{ "}}" }}"
               }[1m])
             )
 
@@ -49,16 +49,16 @@ spec:
     - name: p99-latency
       interval: 1m
       count: 5
-      successCondition: result[0] < {{args.p99-latency-threshold}}
+      successCondition: result[0] < {{ "{{" }}args.p99-latency-threshold{{ "}}" }}
       failureLimit: 1
       provider:
         prometheus:
-          address: "{{args.prometheus-address}}"
+          address: "{{ "{{" }}args.prometheus-address{{ "}}" }}"
           query: |
             histogram_quantile(0.99,
               sum(
                 rate(http_server_request_duration_seconds_bucket{
-                  service_name="{{args.service-name}}"
+                  service_name="{{ "{{" }}args.service-name{{ "}}" }}"
                 }[1m])
               ) by (le)
             )
