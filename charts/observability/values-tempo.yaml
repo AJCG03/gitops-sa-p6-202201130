@@ -9,14 +9,14 @@ tempo:
   # Alternativas: "distributed" (requiere más recursos)
   mode: "monolithic"
 
-  # Recursos reducidos
+  # Recursos reducidos para e2-small
   resources:
     requests:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 50m
+      memory: 64Mi
     limits:
-      cpu: 500m
-      memory: 768Mi
+      cpu: 250m
+      memory: 256Mi
 
   # ─────────────────────────────────────────────
   # Retención de trazas: 3 días
@@ -44,8 +44,8 @@ tempo:
   # Receiver OTLP habilitado
   # ─────────────────────────────────────────────
   # El chart de Tempo ya expone OTLP por defecto:
-  #   - gRPC: 4317
-  #   - HTTP: 4318
+  #    - gRPC: 4317
+  #    - HTTP: 4318
   # El OTel Collector enviará trazas a tempo.observability.svc:4317
 
   # ─────────────────────────────────────────────

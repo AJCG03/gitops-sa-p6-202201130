@@ -62,18 +62,18 @@ loki:
     reporting_enabled: false
 
 # ─────────────────────────────────────────────
-# Modo singleBinary: 1 réplica, todos los componentes juntos
+# Modo singleBinary: 1 réplica, recursos reducidos para e2-small
 # ─────────────────────────────────────────────
 singleBinary:
   replicas: 1
 
   resources:
     requests:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 50m
+      memory: 96Mi
     limits:
-      cpu: 500m
-      memory: 768Mi
+      cpu: 250m
+      memory: 256Mi
 
   # Persistencia para chunks e índices
   persistence:
