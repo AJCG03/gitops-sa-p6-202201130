@@ -9,7 +9,6 @@ metadata:
 spec:
   args:
     - name: service-name
-      description: "Nombre del servicio en las métricas (service label)"
     - name: prometheus-address
       value: "http://kube-prometheus-stack-prometheus.observability.svc.cluster.local:9090"
     - name: error-rate-threshold
