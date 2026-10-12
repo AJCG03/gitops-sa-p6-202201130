@@ -42,11 +42,11 @@ api_gateway_proxy:
     pullPolicy: "IfNotPresent"
   resources:
     limits:
-      cpu: "150m"                    # ← de 200m a 150m
-      memory: "192Mi"                # ← de 256Mi a 192Mi
+      cpu: "150m"
+      memory: "192Mi"
     requests:
-      cpu: "30m"                     # ← de 50m a 30m
-      memory: "48Mi"                 # ← de 64Mi a 48Mi
+      cpu: "50m"      # ← Corregido de 30m a 50m (mínimo del clúster)
+      memory: "64Mi"    # ← Corregido de 48Mi a 64Mi (mínimo del clúster)
   env:
     PORT: "8080"
     NGINX_UPSTREAM_URL: "http://localhost:8081"
@@ -59,7 +59,6 @@ api_gateway_proxy:
     readOnlyRootFilesystem: true
     capabilities:
       drop: ["ALL"]
-
 # ============================================
 # AUTH SERVICE
 # ============================================
