@@ -22,27 +22,13 @@ spec:
             duration: 60s
         - analysis:
             templates:
-              - templateName: canary-metrics
-            args:
-              - name: service-name
-                value: sensores-service
-              - name: error-rate-threshold
-                value: "0.001"
-              - name: p99-latency-threshold
-                value: "0.300"
+              - templateName: canary-metrics-sensores-service
         - setWeight: 50
         - pause:
             duration: 60s
         - analysis:
             templates:
-              - templateName: canary-metrics
-            args:
-              - name: service-name
-                value: sensores-service
-              - name: error-rate-threshold
-                value: "0.001"
-              - name: p99-latency-threshold
-                value: "0.300"
+              - templateName: canary-metrics-sensores-service
         - setWeight: 80
         - pause:
             duration: 60s

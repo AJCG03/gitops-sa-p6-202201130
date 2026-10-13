@@ -22,27 +22,13 @@ spec:
             duration: 60s
         - analysis:
             templates:
-              - templateName: canary-metrics
-            args:
-              - name: service-name
-                value: api-gateway
-              - name: error-rate-threshold
-                value: "0.001"
-              - name: p99-latency-threshold
-                value: "0.200"
+              - templateName: canary-metrics-api-gateway
         - setWeight: 50
         - pause:
             duration: 60s
         - analysis:
             templates:
-              - templateName: canary-metrics
-            args:
-              - name: service-name
-                value: api-gateway
-              - name: error-rate-threshold
-                value: "0.001"
-              - name: p99-latency-threshold
-                value: "0.200"
+              - templateName: canary-metrics-api-gateway
         - setWeight: 80
         - pause:
             duration: 60s
@@ -62,9 +48,6 @@ spec:
       imagePullSecrets:
         - name: ghcr-secret
       containers:
-        # ============================================================
-        # SIDECAR: proxy Go con OpenTelemetry
-        # ============================================================
         - name: otel-proxy
           image: "{{ .Values.api_gateway_proxy.image.repository }}:{{ .Values.api_gateway_proxy.image.tag }}"
           imagePullPolicy: {{ .Values.api_gateway_proxy.image.pullPolicy }}
@@ -106,9 +89,6 @@ spec:
           resources:
             {{- toYaml .Values.api_gateway_proxy.resources | nindent 12 }}
 
-        # ============================================================
-        # NGINX: enrutamiento (ahora en :8081, solo loopback)
-        # ============================================================
         - name: api-gateway
           image: "{{ .Values.api_gateway.image.repository }}:{{ .Values.api_gateway.image.tag }}"
           imagePullPolicy: {{ .Values.api_gateway.image.pullPolicy }}

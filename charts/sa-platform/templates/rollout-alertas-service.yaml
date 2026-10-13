@@ -22,27 +22,13 @@ spec:
             duration: 60s
         - analysis:
             templates:
-              - templateName: canary-metrics
-            args:
-              - name: service-name
-                value: alertas-service
-              - name: error-rate-threshold
-                value: "0.005"
-              - name: p99-latency-threshold
-                value: "0.400"
+              - templateName: canary-metrics-alertas-service
         - setWeight: 50
         - pause:
             duration: 60s
         - analysis:
             templates:
-              - templateName: canary-metrics
-            args:
-              - name: service-name
-                value: alertas-service
-              - name: error-rate-threshold
-                value: "0.005"
-              - name: p99-latency-threshold
-                value: "0.400"
+              - templateName: canary-metrics-alertas-service
         - setWeight: 80
         - pause:
             duration: 60s

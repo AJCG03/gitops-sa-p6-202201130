@@ -1,63 +1,289 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# AnalysisTemplate: api-gateway
+# ═══════════════════════════════════════════════════════════════════════════
 apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
-  name: canary-metrics
+  name: canary-metrics-api-gateway
   namespace: {{ .Values.global.namespace }}
   labels:
     app.kubernetes.io/part-of: sa-platform
     app.kubernetes.io/component: canary-analysis
+    app: api-gateway
 spec:
   args:
-    - name: service-name
     - name: prometheus-address
       value: "http://kube-prometheus-stack-prometheus.observability.svc.cluster.local:9090"
-    - name: error-rate-threshold
-      value: "0.001"
-    - name: p99-latency-threshold
-      value: "0.250"
-
   metrics:
-    # ═══════════════════════════════════════════════════════════════
-    # Métrica 1: Tasa de error 5xx
-    # ═══════════════════════════════════════════════════════════════
     - name: error-rate
-      interval: 1m
+      interval: 30s
       count: 5
-      successCondition: result[0] < {{ "{{" }}args.error-rate-threshold{{ "}}" }}
-      failureLimit: 1
+      successCondition: "len(result) > 0 && result[0] < 0.001"
+      failureLimit: 2
       provider:
         prometheus:
-          address: "{{ "{{" }}args.prometheus-address{{ "}}" }}"
+          address: "{{ `{{args.prometheus-address}}` }}"
           query: |
             sum(
               rate(http_server_request_duration_seconds_count{
-                service_name="{{ "{{" }}args.service-name{{ "}}" }}",
-                http_response_status_code=~"5.."
-              }[1m])
+                job=~".*api-gateway.*",
+                status_code=~"5.."
+              }[2m])
             )
             /
             sum(
               rate(http_server_request_duration_seconds_count{
-                service_name="{{ "{{" }}args.service-name{{ "}}" }}"
-              }[1m])
+                job=~".*api-gateway.*"
+              }[2m])
             )
-
-    # ═══════════════════════════════════════════════════════════════
-    # Métrica 2: Latencia p99
-    # ═══════════════════════════════════════════════════════════════
+            or vector(0)
     - name: p99-latency
-      interval: 1m
+      interval: 30s
       count: 5
-      successCondition: result[0] < {{ "{{" }}args.p99-latency-threshold{{ "}}" }}
-      failureLimit: 1
+      successCondition: "len(result) > 0 && result[0] < 0.200"
+      failureLimit: 2
       provider:
         prometheus:
-          address: "{{ "{{" }}args.prometheus-address{{ "}}" }}"
+          address: "{{ `{{args.prometheus-address}}` }}"
           query: |
-            histogram_quantile(0.99,
+            histogram_quantile(
+              0.99,
               sum(
                 rate(http_server_request_duration_seconds_bucket{
-                  service_name="{{ "{{" }}args.service-name{{ "}}" }}"
-                }[1m])
+                  job=~".*api-gateway.*"
+                }[2m])
               ) by (le)
             )
+            or vector(0)
+---
+# ═══════════════════════════════════════════════════════════════════════════
+# AnalysisTemplate: auth-service
+# ═══════════════════════════════════════════════════════════════════════════
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: canary-metrics-auth-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/part-of: sa-platform
+    app.kubernetes.io/component: canary-analysis
+    app: auth-service
+spec:
+  args:
+    - name: prometheus-address
+      value: "http://kube-prometheus-stack-prometheus.observability.svc.cluster.local:9090"
+  metrics:
+    - name: error-rate
+      interval: 30s
+      count: 5
+      successCondition: "len(result) > 0 && result[0] < 0.001"
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: "{{ `{{args.prometheus-address}}` }}"
+          query: |
+            sum(
+              rate(http_server_request_duration_seconds_count{
+                job=~".*auth-service.*",
+                status_code=~"5.."
+              }[2m])
+            )
+            /
+            sum(
+              rate(http_server_request_duration_seconds_count{
+                job=~".*auth-service.*"
+              }[2m])
+            )
+            or vector(0)
+    - name: p99-latency
+      interval: 30s
+      count: 5
+      successCondition: "len(result) > 0 && result[0] < 0.500"
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: "{{ `{{args.prometheus-address}}` }}"
+          query: |
+            histogram_quantile(
+              0.99,
+              sum(
+                rate(http_server_request_duration_seconds_bucket{
+                  job=~".*auth-service.*"
+                }[2m])
+              ) by (le)
+            )
+            or vector(0)
+---
+# ═══════════════════════════════════════════════════════════════════════════
+# AnalysisTemplate: sensores-service
+# ═══════════════════════════════════════════════════════════════════════════
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: canary-metrics-sensores-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/part-of: sa-platform
+    app.kubernetes.io/component: canary-analysis
+    app: sensores-service
+spec:
+  args:
+    - name: prometheus-address
+      value: "http://kube-prometheus-stack-prometheus.observability.svc.cluster.local:9090"
+  metrics:
+    - name: error-rate
+      interval: 30s
+      count: 5
+      successCondition: "len(result) > 0 && result[0] < 0.001"
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: "{{ `{{args.prometheus-address}}` }}"
+          query: |
+            sum(
+              rate(http_server_request_duration_seconds_count{
+                job=~".*sensores-service.*",
+                status_code=~"5.."
+              }[2m])
+            )
+            /
+            sum(
+              rate(http_server_request_duration_seconds_count{
+                job=~".*sensores-service.*"
+              }[2m])
+            )
+            or vector(0)
+    - name: p99-latency
+      interval: 30s
+      count: 5
+      successCondition: "len(result) > 0 && result[0] < 0.300"
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: "{{ `{{args.prometheus-address}}` }}"
+          query: |
+            histogram_quantile(
+              0.99,
+              sum(
+                rate(http_server_request_duration_seconds_bucket{
+                  job=~".*sensores-service.*"
+                }[2m])
+              ) by (le)
+            )
+            or vector(0)
+---
+# ═══════════════════════════════════════════════════════════════════════════
+# AnalysisTemplate: datos-service
+# ═══════════════════════════════════════════════════════════════════════════
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: canary-metrics-datos-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/part-of: sa-platform
+    app.kubernetes.io/component: canary-analysis
+    app: datos-service
+spec:
+  args:
+    - name: prometheus-address
+      value: "http://kube-prometheus-stack-prometheus.observability.svc.cluster.local:9090"
+  metrics:
+    - name: error-rate
+      interval: 30s
+      count: 5
+      successCondition: "len(result) > 0 && result[0] < 0.001"
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: "{{ `{{args.prometheus-address}}` }}"
+          query: |
+            sum(
+              rate(http_server_request_duration_seconds_count{
+                job=~".*datos-service.*",
+                status_code=~"5.."
+              }[2m])
+            )
+            /
+            sum(
+              rate(http_server_request_duration_seconds_count{
+                job=~".*datos-service.*"
+              }[2m])
+            )
+            or vector(0)
+    - name: p99-latency
+      interval: 30s
+      count: 5
+      successCondition: "len(result) > 0 && result[0] < 0.250"
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: "{{ `{{args.prometheus-address}}` }}"
+          query: |
+            histogram_quantile(
+              0.99,
+              sum(
+                rate(http_server_request_duration_seconds_bucket{
+                  job=~".*datos-service.*"
+                }[2m])
+              ) by (le)
+            )
+            or vector(0)
+---
+# ═══════════════════════════════════════════════════════════════════════════
+# AnalysisTemplate: alertas-service
+# ═══════════════════════════════════════════════════════════════════════════
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: canary-metrics-alertas-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/part-of: sa-platform
+    app.kubernetes.io/component: canary-analysis
+    app: alertas-service
+spec:
+  args:
+    - name: prometheus-address
+      value: "http://kube-prometheus-stack-prometheus.observability.svc.cluster.local:9090"
+  metrics:
+    - name: error-rate
+      interval: 30s
+      count: 5
+      successCondition: "len(result) > 0 && result[0] < 0.005"
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: "{{ `{{args.prometheus-address}}` }}"
+          query: |
+            sum(
+              rate(http_server_request_duration_seconds_count{
+                job=~".*alertas-service.*",
+                status_code=~"5.."
+              }[2m])
+            )
+            /
+            sum(
+              rate(http_server_request_duration_seconds_count{
+                job=~".*alertas-service.*"
+              }[2m])
+            )
+            or vector(0)
+    - name: p99-latency
+      interval: 30s
+      count: 5
+      successCondition: "len(result) > 0 && result[0] < 0.400"
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: "{{ `{{args.prometheus-address}}` }}"
+          query: |
+            histogram_quantile(
+              0.99,
+              sum(
+                rate(http_server_request_duration_seconds_bucket{
+                  job=~".*alertas-service.*"
+                }[2m])
+              ) by (le)
+            )
+            or vector(0)
