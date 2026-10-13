@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════
+# Values para el chart oficial de Tempo (grafana/tempo)
+# Modo monolithic — 1 solo pod
+# Optimizado para GKE con nodos e2-standard-2
+# ═══════════════════════════════════════════════════════════════════
+
 tempo:
   mode: "monolithic"
 
@@ -26,12 +32,23 @@ tempo:
     accessModes:
       - ReadWriteOnce
 
+  # ⚠️ El chart grafana/tempo NO lee 'service.ports'.
+  # Los puertos del Service se definen aquí, usando las claves que
+  # el chart SÍ reconoce.
   service:
     type: ClusterIP
-    httpPort: 3200
-    grpcPort: 9095
-    otlpGrpcPort: 4317
-    otlpHttpPort: 4318
+    port: 3200
+    targetPort: 3200
+
+  # ⚠️ El receptor OTLP se define en 'receivers' (no en 'config').
+  # El chart usa esta clave para crear el Service con puerto 4317.
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
 
   config: |
     server:
@@ -67,6 +84,31 @@ tempo:
 
     overrides:
       max_bytes_per_trace: 5000000
+
+# ⚠️ ADICIONAL: crear un Service extra manualmente para asegurar
+# que el puerto OTLP gRPC (4317) esté expuesto a OTel.
+extraObjects:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: tempo-otlp
+      namespace: observability
+      labels:
+        app.kubernetes.io/name: tempo
+        app.kubernetes.io/part-of: sa-p6-observability
+    spec:
+      type: ClusterIP
+      selector:
+        app.kubernetes.io/name: tempo
+      ports:
+        - name: otlp-grpc
+          port: 4317
+          targetPort: 4317
+          protocol: TCP
+        - name: otlp-http
+          port: 4318
+          targetPort: 4318
+          protocol: TCP
 
 serviceMonitor:
   enabled: true
