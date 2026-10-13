@@ -54,7 +54,7 @@ data:
           cluster: practica6-cluster
 
       otlp/tempo:
-        endpoint: tempo-otlp.observability.svc.cluster.local:4317
+        endpoint: tempo.observability.svc.cluster.local:4317
         tls:
           insecure: true
 
