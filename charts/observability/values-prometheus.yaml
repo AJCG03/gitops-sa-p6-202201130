@@ -98,6 +98,8 @@ alertmanager:
 # ─────────────────────────────────────────────
 grafana:
   enabled: true
+  adminUser: admin
+  adminPassword: "MiPasswordSegura123"   
   resources:
     requests:
       cpu: 20m
