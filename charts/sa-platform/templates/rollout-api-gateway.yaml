@@ -54,6 +54,7 @@ spec:
           ports:
             - name: http-proxy
               containerPort: 8080
+              protocol: TCP
           env:
             {{- range $k, $v := .Values.api_gateway_proxy.env }}
             - name: {{ $k }}
@@ -95,6 +96,7 @@ spec:
           ports:
             - name: http-nginx
               containerPort: 8081
+              protocol: TCP
           env:
             - name: AUTH_SERVICE_URL
               value: "http://auth-service:3000"

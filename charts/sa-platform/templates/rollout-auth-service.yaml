@@ -53,6 +53,7 @@ spec:
           imagePullPolicy: {{ .Values.auth_service.image.pullPolicy }}
           ports:
             - containerPort: 3000
+              protocol: TCP
           env:
             - name: DB_HOST
               valueFrom:

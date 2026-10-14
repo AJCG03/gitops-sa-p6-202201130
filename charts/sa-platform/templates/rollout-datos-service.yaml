@@ -53,6 +53,7 @@ spec:
           imagePullPolicy: {{ .Values.datos_service.image.pullPolicy }}
           ports:
             - containerPort: 3003
+              protocol: TCP
           env:
             - name: MONGODB_URI
               valueFrom:

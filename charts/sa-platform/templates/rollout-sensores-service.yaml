@@ -53,6 +53,7 @@ spec:
           imagePullPolicy: {{ .Values.sensores_service.image.pullPolicy }}
           ports:
             - containerPort: 3002
+              protocol: TCP
           env:
             - name: MONGODB_URI
               valueFrom:
