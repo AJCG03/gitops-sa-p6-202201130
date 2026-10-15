@@ -1,7 +1,73 @@
+# ═══════════════════════════════════════════════════════════════════
+# Values para Loki — SingleBinary, compatible con chart 6.x / Loki 3.x
+# ═══════════════════════════════════════════════════════════════════
+
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false
+
+  commonConfig:
+    replication_factor: 1
+    # ⚠️ NO poner ring aquí: el chart ya lo genera
+
+  # ⚠️ NO poner ingester.lifecycler.ring con min_ready_duration / observe_period
+  #    Esos campos ya no existen. Solo deja lo esencial:
+  ingester:
+    chunk_idle_period: 5m
+    chunk_target_size: 1048576
+    max_chunk_age: 30m
+    chunk_encoding: snappy
+
+  storage:
+    type: filesystem
+    filesystem:
+      chunks_directory: /var/loki/chunks
+      rules_directory: /var/loki/rules
+
+  limits_config:
+    retention_period: 24h
+    max_query_lookback: 24h
+    reject_old_samples: true
+    reject_old_samples_max_age: 24h
+    ingestion_rate_mb: 5
+    ingestion_burst_size_mb: 10
+    max_streams_per_user: 2000
+    max_global_streams_per_user: 2500
+    max_entries_limit_per_query: 5000
+    per_stream_rate_limit: 3MB
+    per_stream_rate_limit_burst: 6MB
+    max_query_series: 500
+    max_query_parallelism: 16
+
+  compactor:
+    working_directory: /var/loki/compactor
+    retention_enabled: true
+    delete_request_store: filesystem
+    compaction_interval: 10m
+    retention_delete_delay: 30m
+    retention_delete_worker_count: 50
+
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+
+  server:
+    http_listen_port: 3100
+    grpc_listen_port: 9095
+    log_level: warn
+
+  analytics:
+    reporting_enabled: false
+
 singleBinary:
   replicas: 1
-  extraArgs:
-    - -target=all
   resources:
     requests:
       cpu: 50m
@@ -15,14 +81,13 @@ singleBinary:
     size: 3Gi
     accessModes:
       - ReadWriteOnce
-  # ⬇️ CLAVE
+  # ⬇️ IMPORTANTE: acelera el arranque del volumen
   podSecurityContext:
     fsGroup: 10001
     fsGroupChangePolicy: OnRootMismatch
     runAsGroup: 10001
     runAsNonRoot: true
     runAsUser: 10001
-  # ⬆️
   containerSecurityContext:
     allowPrivilegeEscalation: false
     capabilities:
@@ -37,9 +102,65 @@ singleBinary:
     timeoutSeconds: 5
     failureThreshold: 6
   livenessProbe:
-    initialDelaySeconds: 60
+    initialDelaySeconds: 90
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 3
   nodeSelector: {}
   tolerations: []
+
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+ingester:
+  replicas: 0
+querier:
+  replicas: 0
+queryFrontend:
+  replicas: 0
+queryScheduler:
+  replicas: 0
+distributor:
+  replicas: 0
+compactor:
+  replicas: 0
+indexGateway:
+  replicas: 0
+bloomCompactor:
+  replicas: 0
+bloomGateway:
+  replicas: 0
+ruler:
+  enabled: false
+  replicas: 0
+
+chunksCache:
+  enabled: false
+  replicas: 0
+  allocatedMemory: 0
+
+resultsCache:
+  enabled: false
+  replicas: 0
+  allocatedMemory: 0
+
+lokiCanary:
+  enabled: false
+
+test:
+  enabled: false
+
+gateway:
+  enabled: false
+
+serviceMonitor:
+  enabled: true
+  labels:
+    release: kube-prometheus-stack
+  interval: 30s
+
+promtail:
+  enabled: false
