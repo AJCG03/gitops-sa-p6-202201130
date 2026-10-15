@@ -1,5 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════
-# OpenTelemetry Collector — Deployment (Optimizado para e2-standard-2)
+# OpenTelemetry Collector — Deployment
+# FIX P10: añadido structured_metadata y atributos de bajo consumo
 # ═══════════════════════════════════════════════════════════════════
 
 apiVersion: v1
@@ -60,11 +61,20 @@ data:
 
       loki:
         endpoint: http://loki.observability.svc.cluster.local:3100/loki/api/v1/push
+        # ⬅️ FIX P10: solo labels de baja cardinalidad
         default_labels_enabled:
           exporter: false
           job: true
-          instance: true
+          instance: false
           level: true
+        # ⬅️ FIX P10: los atributos de alta cardinalidad van a structured metadata
+        labels:
+          attributes:
+            level: "level"
+            service_name: "service"
+        structured_metadata:
+          trace_id: "trace_id"
+          span_id: "span_id"
         retry_on_failure:
           enabled: true
           initial_interval: 5s

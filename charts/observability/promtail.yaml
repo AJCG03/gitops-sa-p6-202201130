@@ -1,6 +1,8 @@
 # ═══════════════════════════════════════════════════════════════════
-# Promtail — Agente de recolección de logs
-# Se despliega como DaemonSet (1 pod por nodo)
+# Promtail — Agente de recolección de logs (DaemonSet, 1 por nodo)
+# FIX P10:
+#   - trace_id y span_id movidos a structured_metadata (NO labels)
+#   - Drop de /health, /ready, /metrics para reducir 80% del volumen
 # ═══════════════════════════════════════════════════════════════════
 
 apiVersion: v1
@@ -87,13 +89,21 @@ data:
               expressions:
                 level: level
                 service: service
-                trace_id: trace_id
-                span_id: span_id
                 message: message
                 timestamp: timestamp
+                trace_id: trace_id
+                span_id: span_id
+                req_url: req.url           # ⬅️ extraer URL para dropear health
+          # ⬅️ FIX P10: dropear health checks (reduce 80-90%)
+          - drop:
+              source: req_url
+              expression: "^/(health|ready|metrics|livez|readyz)$"
+          # ⬅️ FIX P10: solo labels de BAJA cardinalidad
           - labels:
               level:
               service:
+          # ⬅️ FIX P10: trace_id/span_id como structured metadata (NO crean streams)
+          - structured_metadata:
               trace_id:
               span_id:
           - timestamp:
