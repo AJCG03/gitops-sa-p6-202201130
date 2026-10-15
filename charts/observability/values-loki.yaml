@@ -2,12 +2,13 @@
 # Values para Loki — SingleBinary con config.yaml INYECTADO
 # FIX P10 DEFINITIVO:
 #   - config.yaml completo inyectado (evita memberlist)
-#   - schema_config DUPLICADO (chart lo valida + Loki lo necesita)
-#   - instance_port: 9095 (gRPC) para el ring
-#   - -query-scheduler.use-scheduler-ring=false (elimina empty ring)
+#   - instance_addr: ${HOSTNAME} (evita empty ring)
+#   - instance_port: 9095 (gRPC)
+#   - -query-scheduler.use-scheduler-ring=false
 #   - WAL en /var/loki/wal (evita read-only file system)
-#   - SIN compactor.ring ni tsdb_shipper.shared_store (no existen en Loki 3.0)
-#   - fsGroup TEMPORAL a 0 (evita chown de 180k archivos)
+#   - schema_config DUPLICADO (chart + Loki)
+#   - SIN compactor.ring ni tsdb_shipper.shared_store
+#   - fsGroup TEMPORAL a 0
 # ═══════════════════════════════════════════════════════════════════
 
 deploymentMode: SingleBinary
@@ -26,7 +27,7 @@ loki:
           prefix: index_
           period: 24h
 
-  # ⬅️ Config completa inyectada (fuerza inmemory ring)
+  # ⬅️ Config completa inyectada
   config: |
     auth_enabled: false
 
@@ -43,7 +44,7 @@ loki:
       ring:
         kvstore:
           store: inmemory
-        instance_addr: 127.0.0.1
+        instance_addr: ${HOSTNAME}     # ⬅️ FIX: IP real del pod (evita empty ring)
         instance_port: 9095
 
     ingester:
@@ -51,10 +52,9 @@ loki:
       chunk_target_size: 1048576
       max_chunk_age: 30m
       chunk_encoding: snappy
-      # ⬅️ FIX: WAL en /var/loki/wal (evita read-only file system)
       wal:
         enabled: true
-        dir: /var/loki/wal
+        dir: /var/loki/wal             # ⬅️ FIX: WAL en ruta escribible
       lifecycler:
         ring:
           kvstore:
@@ -71,7 +71,6 @@ loki:
         kvstore:
           store: inmemory
 
-    # ⬅️ SIN ring (no existe en Loki 3.0)
     compactor:
       working_directory: /var/loki/compactor
       retention_enabled: true
@@ -106,7 +105,6 @@ loki:
             prefix: index_
             period: 24h
 
-    # ⬅️ SIN shared_store (no existe en Loki 3.0)
     storage_config:
       filesystem:
         directory: /var/loki/chunks
@@ -119,10 +117,15 @@ loki:
 
 singleBinary:
   replicas: 1
-  # ⬅️ Forzar todos los componentes + desactivar scheduler ring
   extraArgs:
     - -target=all
     - -query-scheduler.use-scheduler-ring=false
+  # ⬅️ CRÍTICO: exponer HOSTNAME como variable de entorno
+  env:
+    - name: HOSTNAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
   resources:
     requests:
       cpu: 50m
