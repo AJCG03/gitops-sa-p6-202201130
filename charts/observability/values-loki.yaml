@@ -1,15 +1,8 @@
-# ═══════════════════════════════════════════════════════════════════
-# Values para el chart oficial de Loki (grafana/loki)
-# Modo singleBinary: 1 pod autónomo
-# Optimizado para GKE (3Gi PVC, 96Mi RAM)
-# ═══════════════════════════════════════════════════════════════════
-
 deploymentMode: SingleBinary
 
 loki:
   auth_enabled: false
 
-  # ⬇️ Configuración del Ring e Ingester para SingleBinary autónomo (desactiva memberlist distribuido)
   commonConfig:
     replication_factor: 1
     ring:
@@ -76,18 +69,16 @@ singleBinary:
   resources:
     requests:
       cpu: 50m
-      memory: 96Mi
+      memory: 128Mi
     limits:
-      cpu: 200m
-      memory: 256Mi
+      cpu: 250m
+      memory: 384Mi
   persistence:
     enabled: true
     storageClass: standard-rwo
     size: 3Gi
     accessModes:
       - ReadWriteOnce
-  nodeSelector: {}
-  tolerations: []
 
 backend:
   replicas: 0
