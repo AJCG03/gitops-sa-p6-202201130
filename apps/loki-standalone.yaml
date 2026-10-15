@@ -28,6 +28,8 @@ spec:
           ports:
             - containerPort: 3100
               name: http
+            - containerPort: 9095
+              name: grpc
           readinessProbe:
             httpGet:
               path: /ready
@@ -56,5 +58,8 @@ spec:
     - port: 3100
       targetPort: http
       name: http
+    - port: 9095
+      targetPort: grpc
+      name: grpc
   selector:
     app: loki
