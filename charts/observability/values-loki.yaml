@@ -9,10 +9,7 @@ loki:
 
   commonConfig:
     replication_factor: 1
-    # ⚠️ NO poner ring aquí: el chart ya lo genera
 
-  # ⚠️ NO poner ingester.lifecycler.ring con min_ready_duration / observe_period
-  #    Esos campos ya no existen. Solo deja lo esencial:
   ingester:
     chunk_idle_period: 5m
     chunk_target_size: 1048576
@@ -81,21 +78,6 @@ singleBinary:
     size: 3Gi
     accessModes:
       - ReadWriteOnce
-  # ⬇️ IMPORTANTE: acelera el arranque del volumen
-  podSecurityContext:
-    fsGroup: 10001
-    fsGroupChangePolicy: OnRootMismatch
-    runAsGroup: 10001
-    runAsNonRoot: true
-    runAsUser: 10001
-  containerSecurityContext:
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop:
-        - ALL
-    readOnlyRootFilesystem: false
-    runAsNonRoot: true
-    runAsUser: 10001
   readinessProbe:
     initialDelaySeconds: 60
     periodSeconds: 10
@@ -108,6 +90,23 @@ singleBinary:
     failureThreshold: 3
   nodeSelector: {}
   tolerations: []
+
+# ⬇️ A NIVEL RAÍZ (así lo espera el chart)
+podSecurityContext:
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+  runAsGroup: 10001
+  runAsNonRoot: true
+  runAsUser: 10001
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 10001
 
 backend:
   replicas: 0
