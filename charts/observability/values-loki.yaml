@@ -1,3 +1,13 @@
+# ═══════════════════════════════════════════════════════════════════
+# Values para Loki — SingleBinary con config.yaml INYECTADO
+# FIX P10 DEFINITIVO:
+#   - Se inyecta TODO el config.yaml manualmente (evita memberlist)
+#   - schema_config DUPLICADO (chart lo valida + Loki lo necesita)
+#   - instance_port: 9095 (gRPC) para el ring
+#   - -query-scheduler.use-scheduler-ring=false (elimina empty ring)
+#   - fsGroup TEMPORAL a 0 (evita chown de 180k archivos)
+# ═══════════════════════════════════════════════════════════════════
+
 deploymentMode: SingleBinary
 
 loki:
@@ -14,7 +24,7 @@ loki:
           prefix: index_
           period: 24h
 
-  # ⬅️ Tu config manual para forzar inmemory ring
+  # ⬅️ Config completa inyectada (fuerza inmemory ring)
   config: |
     auth_enabled: false
 
@@ -102,3 +112,115 @@ loki:
 
     analytics:
       reporting_enabled: false
+
+singleBinary:
+  replicas: 1
+  # ⬅️ FIX: forzar todos los componentes + desactivar scheduler ring
+  extraArgs:
+    - -target=all
+    - -query-scheduler.use-scheduler-ring=false
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 384Mi
+  persistence:
+    enabled: true
+    storageClass: standard-rwo
+    size: 3Gi
+    accessModes:
+      - ReadWriteOnce
+  readinessProbe:
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  livenessProbe:
+    initialDelaySeconds: 90
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  nodeSelector: {}
+  tolerations: []
+
+# ⬅️ TEMPORAL: fsGroup en 0 para evitar chown de 180k archivos
+#    Una vez Loki arranque y limpies inodos, cambia a:
+#      fsGroup: 10001
+#      fsGroupChangePolicy: OnRootMismatch
+#      runAsGroup: 10001
+#      runAsNonRoot: true
+#      runAsUser: 10001
+podSecurityContext:
+  fsGroup: 0
+  runAsGroup: 0
+  runAsNonRoot: false
+  runAsUser: 0
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: false
+  runAsUser: 0
+
+# Deshabilitar TODOS los componentes distribuidos
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+ingester:
+  replicas: 0
+querier:
+  replicas: 0
+queryFrontend:
+  replicas: 0
+queryScheduler:
+  replicas: 0
+distributor:
+  replicas: 0
+compactor:
+  replicas: 0
+indexGateway:
+  replicas: 0
+bloomCompactor:
+  replicas: 0
+bloomGateway:
+  replicas: 0
+ruler:
+  enabled: false
+  replicas: 0
+
+# Deshabilitar caches (ahorra RAM)
+chunksCache:
+  enabled: false
+  replicas: 0
+  allocatedMemory: 0
+
+resultsCache:
+  enabled: false
+  replicas: 0
+  allocatedMemory: 0
+
+lokiCanary:
+  enabled: false
+
+test:
+  enabled: false
+
+gateway:
+  enabled: false
+
+serviceMonitor:
+  enabled: true
+  labels:
+    release: kube-prometheus-stack
+  interval: 30s
+
+promtail:
+  enabled: false
