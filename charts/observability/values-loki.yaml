@@ -1,7 +1,7 @@
 # ═══════════════════════════════════════════════════════════════════
 # Values para Loki — SingleBinary con config.yaml INYECTADO
 # FIX P10 DEFINITIVO:
-#   - config.yaml completo inyectado (evita memberlist)
+#   - -config.expand-env=true (expande ${HOSTNAME} en config)
 #   - instance_addr: ${HOSTNAME} (evita empty ring)
 #   - instance_port: 9095 (gRPC)
 #   - -query-scheduler.use-scheduler-ring=false
@@ -44,7 +44,7 @@ loki:
       ring:
         kvstore:
           store: inmemory
-        instance_addr: ${HOSTNAME}     # ⬅️ FIX: IP real del pod (evita empty ring)
+        instance_addr: ${HOSTNAME}
         instance_port: 9095
 
     ingester:
@@ -54,7 +54,7 @@ loki:
       chunk_encoding: snappy
       wal:
         enabled: true
-        dir: /var/loki/wal             # ⬅️ FIX: WAL en ruta escribible
+        dir: /var/loki/wal
       lifecycler:
         ring:
           kvstore:
@@ -120,7 +120,7 @@ singleBinary:
   extraArgs:
     - -target=all
     - -query-scheduler.use-scheduler-ring=false
-  # ⬅️ CRÍTICO: exponer HOSTNAME como variable de entorno
+    - -config.expand-env=true          # ⬅️ FIX CRÍTICO: expande ${HOSTNAME}
   env:
     - name: HOSTNAME
       valueFrom:
@@ -153,12 +153,6 @@ singleBinary:
   tolerations: []
 
 # ⬅️ TEMPORAL: fsGroup en 0 para evitar chown de 180k archivos
-#    Una vez Loki arranque y limpies inodos, cambia a:
-#      fsGroup: 10001
-#      fsGroupChangePolicy: OnRootMismatch
-#      runAsGroup: 10001
-#      runAsNonRoot: true
-#      runAsUser: 10001
 podSecurityContext:
   fsGroup: 0
   runAsGroup: 0
@@ -203,7 +197,6 @@ ruler:
   enabled: false
   replicas: 0
 
-# Deshabilitar caches (ahorra RAM)
 chunksCache:
   enabled: false
   replicas: 0
