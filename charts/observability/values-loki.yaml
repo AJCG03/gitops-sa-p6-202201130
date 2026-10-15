@@ -1,3 +1,9 @@
+# ═══════════════════════════════════════════════════════════════════
+# Values para el chart oficial de Loki (grafana/loki) — CORREGIDO
+# Modo singleBinary: 1 pod autónomo con tiempos de sonda ajustados
+# Optimizado para GKE (3Gi PVC, 384Mi RAM Limit)
+# ═══════════════════════════════════════════════════════════════════
+
 deploymentMode: SingleBinary
 
 loki:
@@ -79,6 +85,19 @@ singleBinary:
     size: 3Gi
     accessModes:
       - ReadWriteOnce
+  # ⬇️ Aumento del tiempo de espera para evitar el fallo 503 inicial de Readiness Probe
+  readinessProbe:
+    initialDelaySeconds: 45
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  livenessProbe:
+    initialDelaySeconds: 45
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  nodeSelector: {}
+  tolerations: []
 
 backend:
   replicas: 0
