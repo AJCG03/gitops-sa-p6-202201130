@@ -7,7 +7,7 @@
 #   - -target=all + -query-scheduler.use-scheduler-ring=false
 #   - WAL en /var/loki/wal
 #   - lifecycler con address/port explícitos
-#   - ingester_client configurado
+#   - ingester_client configurado (SIN check_interval)
 #   - SIN compactor.ring ni shared_store
 # ═══════════════════════════════════════════════════════════════════
 
@@ -70,7 +70,6 @@ loki:
         max_recv_msg_size: 104857600
         max_send_msg_size: 104857600
       pool_config:
-        check_interval: 1s
         health_check_ingesters: true
 
     distributor:
