@@ -1,26 +1,14 @@
-# ═══════════════════════════════════════════════════════════════════
-# Values para Loki — SingleBinary, compatible con chart 6.x / Loki 3.x
-# FIX P10:
-#   - Ring en inmemory (evita memberlist DNS)
-#   - fsGroup TEMPORAL a 0 para evitar chown de 179k archivos
-#     ⚠️ Una vez Loki arranque y limpies inodos, regresa fsGroup a 10001
-#   - Límites de streams correctos (sin campos que no existen)
-#   - Retención + compactor activos
-# ═══════════════════════════════════════════════════════════════════
-
-deploymentMode: SingleBinary
-
 loki:
   auth_enabled: false
 
-  # ⬅️ FIX P10: ring inmemory, NO memberlist
+  # ⬅️ FIX: ring inmemory con instance_port a 9095 (gRPC)
   commonConfig:
     replication_factor: 1
     ring:
       kvstore:
         store: inmemory
       instance_addr: 127.0.0.1
-      instance_port: 3100
+      instance_port: 9095          # ⬅️ CAMBIO: era 3100, ahora 9095
 
   ingester:
     chunk_idle_period: 5m
@@ -34,7 +22,6 @@ loki:
       chunks_directory: /var/loki/chunks
       rules_directory: /var/loki/rules
 
-  # ⬅️ FIX P10: límites correctos (sin max_streams_matrix_width)
   limits_config:
     retention_period: 24h
     max_query_lookback: 24h
@@ -51,7 +38,6 @@ loki:
     max_query_parallelism: 16
     max_label_names_per_series: 15
 
-  # ⬅️ FIX P10: compactor con retención activa
   compactor:
     working_directory: /var/loki/compactor
     retention_enabled: true
@@ -70,118 +56,14 @@ loki:
           prefix: index_
           period: 24h
 
+  # ⬅️ FIX: server con puertos separados + límites gRPC
   server:
     http_listen_port: 3100
     grpc_listen_port: 9095
     log_level: warn
+    grpc_server_max_recv_msg_size: 104857600
+    grpc_server_max_send_msg_size: 104857600
+    grpc_server_max_concurrent_streams: 1000
 
   analytics:
     reporting_enabled: false
-
-singleBinary:
-  replicas: 1
-  resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
-    limits:
-      cpu: 250m
-      memory: 384Mi
-  persistence:
-    enabled: true
-    storageClass: standard-rwo
-    size: 3Gi
-    accessModes:
-      - ReadWriteOnce
-  readinessProbe:
-    initialDelaySeconds: 60
-    periodSeconds: 10
-    timeoutSeconds: 5
-    failureThreshold: 6
-  livenessProbe:
-    initialDelaySeconds: 90
-    periodSeconds: 10
-    timeoutSeconds: 5
-    failureThreshold: 3
-  nodeSelector: {}
-  tolerations: []
-
-# ⬅️ FIX P10: TEMPORAL — fsGroup en 0 para evitar chown de 179k archivos
-#    Una vez Loki arranque y limpies inodos, cambia a:
-#      fsGroup: 10001
-#      fsGroupChangePolicy: OnRootMismatch
-#      runAsGroup: 10001
-#      runAsNonRoot: true
-#      runAsUser: 10001
-podSecurityContext:
-  fsGroup: 0
-  runAsGroup: 0
-  runAsNonRoot: false
-  runAsUser: 0
-
-containerSecurityContext:
-  allowPrivilegeEscalation: false
-  capabilities:
-    drop:
-      - ALL
-  readOnlyRootFilesystem: false
-  runAsNonRoot: false
-  runAsUser: 0
-
-# Deshabilitar componentes distribuidos
-backend:
-  replicas: 0
-read:
-  replicas: 0
-write:
-  replicas: 0
-ingester:
-  replicas: 0
-querier:
-  replicas: 0
-queryFrontend:
-  replicas: 0
-queryScheduler:
-  replicas: 0
-distributor:
-  replicas: 0
-compactor:
-  replicas: 0
-indexGateway:
-  replicas: 0
-bloomCompactor:
-  replicas: 0
-bloomGateway:
-  replicas: 0
-ruler:
-  enabled: false
-  replicas: 0
-
-# Deshabilitar caches (ahorra RAM)
-chunksCache:
-  enabled: false
-  replicas: 0
-  allocatedMemory: 0
-
-resultsCache:
-  enabled: false
-  replicas: 0
-  allocatedMemory: 0
-
-lokiCanary:
-  enabled: false
-
-test:
-  enabled: false
-
-gateway:
-  enabled: false
-
-serviceMonitor:
-  enabled: true
-  labels:
-    release: kube-prometheus-stack
-  interval: 30s
-
-promtail:
-  enabled: false
