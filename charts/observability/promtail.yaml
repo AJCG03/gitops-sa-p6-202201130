@@ -1,3 +1,65 @@
+# ═══════════════════════════════════════════════════════════════════
+# Promtail — FIX P10 DEFINITIVO
+# - trace_id/span_id → structured_metadata (NO crean streams)
+# - Solo labels de baja cardinalidad
+# - Drop de health checks
+# - Elimina filename, pod, container, node, stream de labels
+# - SIN tail_from_end (no soportado en Promtail 3.1.1)
+# ═══════════════════════════════════════════════════════════════════
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: promtail
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: promtail
+    app.kubernetes.io/part-of: sa-p6-observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: promtail
+  labels:
+    app.kubernetes.io/name: promtail
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - nodes/proxy
+      - services
+      - endpoints
+      - pods
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["extensions"]
+    resources:
+      - ingresses
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: promtail
+  labels:
+    app.kubernetes.io/name: promtail
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: promtail
+subjects:
+  - kind: ServiceAccount
+    name: promtail
+    namespace: observability
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: promtail-config
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: promtail
+data:
+  promtail.yaml: |
     server:
       http_listen_port: 9080
       grpc_listen_port: 0
@@ -18,6 +80,8 @@
 
     scrape_configs:
       - job_name: sa-p6-pods
+        # ⬅️ FIX P10: SIN tail_from_end (no es válido en 3.1.1)
+        # Promtail hace tail desde el final por defecto para archivos nuevos
         kubernetes_sd_configs:
           - role: pod
             namespaces:
@@ -35,12 +99,15 @@
                 trace_id: trace_id
                 span_id: span_id
                 req_url: req.url
+          # ⬅️ FIX P10: dropear health checks (reduce 80-90% del volumen)
           - drop:
               source: req_url
               expression: "^/(health|ready|metrics|livez|readyz)$"
+          # ⬅️ FIX P10: solo labels de BAJA cardinalidad
           - labels:
               level:
               service:
+          # ⬅️ FIX P10: trace_id/span_id como structured metadata (NO crean streams)
           - structured_metadata:
               trace_id:
               span_id:
@@ -54,16 +121,94 @@
               source: message
 
         relabel_configs:
+          # Solo namespace sa-p6
           - source_labels: [__meta_kubernetes_namespace]
             action: keep
             regex: sa-p6
+
+          # ⬅️ SOLO labels de baja cardinalidad
           - source_labels: [__meta_kubernetes_namespace]
             target_label: namespace
           - source_labels: [__meta_kubernetes_pod_label_app]
             target_label: app
+
+          # ⬅️ ELIMINAR labels de alta cardinalidad (evita 429)
           - action: labeldrop
             regex: "pod|container|node|stream|filename|service_name"
+
+          # Path del log
           - source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
             target_label: __path__
             separator: /
             replacement: /var/log/pods/*$1/*.log
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: promtail
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: promtail
+    app.kubernetes.io/part-of: sa-p6-observability
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: promtail
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: promtail
+    spec:
+      serviceAccountName: promtail
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: promtail
+          image: grafana/promtail:3.1.1
+          imagePullPolicy: IfNotPresent
+          args:
+            - -config.file=/etc/promtail/promtail.yaml
+          resources:
+            requests:
+              cpu: 30m
+              memory: 48Mi
+            limits:
+              cpu: 150m
+              memory: 192Mi
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          ports:
+            - containerPort: 9080
+              name: http-metrics
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /etc/promtail
+            - name: run
+              mountPath: /run/promtail
+            - name: varlog
+              mountPath: /var/log
+              readOnly: true
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: config
+          configMap:
+            name: promtail-config
+        - name: run
+          emptyDir: {}
+        - name: varlog
+          hostPath:
+            path: /var/log
