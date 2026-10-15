@@ -1,9 +1,9 @@
 # ═══════════════════════════════════════════════════════════════════
 # Values para Loki — SingleBinary con config.yaml INYECTADO
 # FIX P10 DEFINITIVO:
-#   - -config.expand-env=true (expande ${HOSTNAME})
-#   - instance_addr: ${HOSTNAME}
-#   - -query-scheduler.use-scheduler-ring=false (ELIMINA EMPTY RING)
+#   - instance_addr: 127.0.0.1 (SingleBinary, mismo pod)
+#   - instance_port: 9095 (gRPC)
+#   - -target=all + -query-scheduler.use-scheduler-ring=false
 #   - WAL en /var/loki/wal
 #   - SIN compactor.ring ni shared_store
 # ═══════════════════════════════════════════════════════════════════
@@ -36,7 +36,7 @@ loki:
       ring:
         kvstore:
           store: inmemory
-        instance_addr: ${HOSTNAME}
+        instance_addr: 127.0.0.1
         instance_port: 9095
 
     ingester:
@@ -108,13 +108,8 @@ singleBinary:
   replicas: 1
   extraArgs:
     - -target=all
-    - -query-scheduler.use-scheduler-ring=false   # ⬅️ ESTE ES EL FIX
+    - -query-scheduler.use-scheduler-ring=false
     - -config.expand-env=true
-  env:
-    - name: HOSTNAME
-      valueFrom:
-        fieldRef:
-          fieldPath: metadata.name
   resources:
     requests:
       cpu: 50m
@@ -128,8 +123,20 @@ singleBinary:
     size: 3Gi
     accessModes:
       - ReadWriteOnce
+  readinessProbe:
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  livenessProbe:
+    initialDelaySeconds: 90
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  nodeSelector: {}
+  tolerations: []
 
-# fsGroup TEMPORAL a 0 (evita chown)
+# fsGroup TEMPORAL a 0 (evita chown de 180k archivos)
 podSecurityContext:
   fsGroup: 0
   runAsGroup: 0
