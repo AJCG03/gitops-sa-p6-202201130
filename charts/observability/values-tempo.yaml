@@ -1,7 +1,7 @@
 # ═══════════════════════════════════════════════════════════════════
-# Values para el chart oficial de Tempo (grafana/tempo)
+# Values para el chart oficial de Tempo (grafana/tempo) — CORREGIDO
 # Modo monolithic — 1 solo pod
-# Optimizado para GKE con nodos e2-standard-2
+# Optimizado para GKE con límite de memoria ajustado para evitar OOMKilled
 # ═══════════════════════════════════════════════════════════════════
 
 tempo:
@@ -13,7 +13,11 @@ tempo:
       memory: 64Mi
     limits:
       cpu: 150m
-      memory: 192Mi
+      memory: 384Mi   # ⬅️ Aumentado de 192Mi a 384Mi para evitar OOMKilled (Exit Code 137)
+
+  # ⬇️ Solución al consumo masivo de memoria que causaba los reinicios
+  extraArgs:
+    - -mem-ballast-size-mbs=32
 
   retention: 24h
 
@@ -32,16 +36,11 @@ tempo:
     accessModes:
       - ReadWriteOnce
 
-  # ⚠️ El chart grafana/tempo NO lee 'service.ports'.
-  # Los puertos del Service se definen aquí, usando las claves que
-  # el chart SÍ reconoce.
   service:
     type: ClusterIP
     port: 3200
     targetPort: 3200
 
-  # ⚠️ El receptor OTLP se define en 'receivers' (no en 'config').
-  # El chart usa esta clave para crear el Service con puerto 4317.
   receivers:
     otlp:
       protocols:
@@ -79,14 +78,12 @@ tempo:
         backend: local
         local:
           path: /var/tempo/traces
-        wal:
-          path: /var/tempo/wal
+          wal:
+            path: /var/tempo/wal
 
     overrides:
       max_bytes_per_trace: 5000000
 
-# ⚠️ ADICIONAL: crear un Service extra manualmente para asegurar
-# que el puerto OTLP gRPC (4317) esté expuesto a OTel.
 extraObjects:
   - apiVersion: v1
     kind: Service
