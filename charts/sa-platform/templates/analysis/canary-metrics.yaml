@@ -24,9 +24,9 @@ spec:
         prometheus:
           address: "{{ `{{args.prometheus-address}}` }}"
           query: |
-            sum(rate(gateway_requests_total{service="api-gateway",status=~"5.."}[2m]))
+            sum(rate(gateway_requests_total{exported_service="api-gateway",status=~"5.."}[2m]))
             /
-            sum(rate(gateway_requests_total{service="api-gateway"}[2m]))
+            sum(rate(gateway_requests_total{exported_service="api-gateway"}[2m]))
             or vector(0)
     - name: p95-latency
       interval: 30s
@@ -38,7 +38,7 @@ spec:
           address: "{{ `{{args.prometheus-address}}` }}"
           query: |
             histogram_quantile(0.95,
-              sum(rate(gateway_request_duration_seconds_bucket{service="api-gateway"}[2m]))
+              sum(rate(gateway_request_duration_seconds_bucket{exported_service="api-gateway"}[2m]))
               by (le)
             )
             or vector(0)
@@ -69,9 +69,9 @@ spec:
         prometheus:
           address: "{{ `{{args.prometheus-address}}` }}"
           query: |
-            sum(rate(gateway_requests_total{service="auth-service",status=~"5.."}[2m]))
+            sum(rate(gateway_requests_total{exported_service="auth-service",status=~"5.."}[2m]))
             /
-            sum(rate(gateway_requests_total{service="auth-service"}[2m]))
+            sum(rate(gateway_requests_total{exported_service="auth-service"}[2m]))
             or vector(0)
     - name: p95-latency
       interval: 30s
@@ -83,7 +83,7 @@ spec:
           address: "{{ `{{args.prometheus-address}}` }}"
           query: |
             histogram_quantile(0.95,
-              sum(rate(gateway_request_duration_seconds_bucket{service="auth-service"}[2m]))
+              sum(rate(gateway_request_duration_seconds_bucket{exported_service="auth-service"}[2m]))
               by (le)
             )
             or vector(0)
@@ -114,9 +114,9 @@ spec:
         prometheus:
           address: "{{ `{{args.prometheus-address}}` }}"
           query: |
-            sum(rate(gateway_requests_total{service="sensores-service",status=~"5.."}[2m]))
+            sum(rate(gateway_requests_total{exported_service="sensores-service",status=~"5.."}[2m]))
             /
-            sum(rate(gateway_requests_total{service="sensores-service"}[2m]))
+            sum(rate(gateway_requests_total{exported_service="sensores-service"}[2m]))
             or vector(0)
     - name: p95-latency
       interval: 30s
@@ -128,7 +128,7 @@ spec:
           address: "{{ `{{args.prometheus-address}}` }}"
           query: |
             histogram_quantile(0.95,
-              sum(rate(gateway_request_duration_seconds_bucket{service="sensores-service"}[2m]))
+              sum(rate(gateway_request_duration_seconds_bucket{exported_service="sensores-service"}[2m]))
               by (le)
             )
             or vector(0)
@@ -159,9 +159,9 @@ spec:
         prometheus:
           address: "{{ `{{args.prometheus-address}}` }}"
           query: |
-            sum(rate(gateway_requests_total{service="datos-service",status=~"5.."}[2m]))
+            sum(rate(gateway_requests_total{exported_service="datos-service",status=~"5.."}[2m]))
             /
-            sum(rate(gateway_requests_total{service="datos-service"}[2m]))
+            sum(rate(gateway_requests_total{exported_service="datos-service"}[2m]))
             or vector(0)
     - name: p95-latency
       interval: 30s
@@ -173,7 +173,7 @@ spec:
           address: "{{ `{{args.prometheus-address}}` }}"
           query: |
             histogram_quantile(0.95,
-              sum(rate(gateway_request_duration_seconds_bucket{service="datos-service"}[2m]))
+              sum(rate(gateway_request_duration_seconds_bucket{exported_service="datos-service"}[2m]))
               by (le)
             )
             or vector(0)
@@ -204,9 +204,9 @@ spec:
         prometheus:
           address: "{{ `{{args.prometheus-address}}` }}"
           query: |
-            sum(rate(gateway_requests_total{service="alertas-service",status=~"5.."}[2m]))
+            sum(rate(gateway_requests_total{exported_service="alertas-service",status=~"5.."}[2m]))
             /
-            sum(rate(gateway_requests_total{service="alertas-service"}[2m]))
+            sum(rate(gateway_requests_total{exported_service="alertas-service"}[2m]))
             or vector(0)
     - name: p95-latency
       interval: 30s
@@ -218,7 +218,7 @@ spec:
           address: "{{ `{{args.prometheus-address}}` }}"
           query: |
             histogram_quantile(0.95,
-              sum(rate(gateway_request_duration_seconds_bucket{service="alertas-service"}[2m]))
+              sum(rate(gateway_request_duration_seconds_bucket{exported_service="alertas-service"}[2m]))
               by (le)
             )
             or vector(0)
