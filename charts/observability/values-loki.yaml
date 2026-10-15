@@ -1,9 +1,10 @@
 # ═══════════════════════════════════════════════════════════════════
 # Values para Loki — SingleBinary, compatible con chart 6.x / Loki 3.x
-# FIX P10: 
+# FIX P10:
 #   - Ring en inmemory (evita memberlist DNS)
-#   - fsGroup a nivel raíz con OnRootMismatch
-#   - Límites de streams aumentados
+#   - fsGroup TEMPORAL a 0 para evitar chown de 179k archivos
+#     ⚠️ Una vez Loki arranque y limpies inodos, regresa fsGroup a 10001
+#   - Límites de streams correctos (sin campos que no existen)
 #   - Retención + compactor activos
 # ═══════════════════════════════════════════════════════════════════
 
@@ -33,7 +34,7 @@ loki:
       chunks_directory: /var/loki/chunks
       rules_directory: /var/loki/rules
 
-  # ⬅️ FIX P10: streams más altos + límites por stream
+  # ⬅️ FIX P10: límites correctos (sin max_streams_matrix_width)
   limits_config:
     retention_period: 24h
     max_query_lookback: 24h
@@ -48,9 +49,7 @@ loki:
     per_stream_rate_limit_burst: 6MB
     max_query_series: 500
     max_query_parallelism: 16
-    # ⬅️ NUEVO: reducir streams por label set
     max_label_names_per_series: 15
-    max_streams_matrix_width: 5
 
   # ⬅️ FIX P10: compactor con retención activa
   compactor:
@@ -107,15 +106,18 @@ singleBinary:
   nodeSelector: {}
   tolerations: []
 
-# ⬅️ FIX P10: fsGroup a NIVEL RAÍZ (así lo espera el chart)
-#    Si el pod se queda en Pending procesando archivos, cambia temporalmente
-#    fsGroup/runAsUser a 0, deja que arranque, limpia inodos, y regresa a 10001.
+# ⬅️ FIX P10: TEMPORAL — fsGroup en 0 para evitar chown de 179k archivos
+#    Una vez Loki arranque y limpies inodos, cambia a:
+#      fsGroup: 10001
+#      fsGroupChangePolicy: OnRootMismatch
+#      runAsGroup: 10001
+#      runAsNonRoot: true
+#      runAsUser: 10001
 podSecurityContext:
-  fsGroup: 10001
-  fsGroupChangePolicy: OnRootMismatch
-  runAsGroup: 10001
-  runAsNonRoot: true
-  runAsUser: 10001
+  fsGroup: 0
+  runAsGroup: 0
+  runAsNonRoot: false
+  runAsUser: 0
 
 containerSecurityContext:
   allowPrivilegeEscalation: false
@@ -123,8 +125,8 @@ containerSecurityContext:
     drop:
       - ALL
   readOnlyRootFilesystem: false
-  runAsNonRoot: true
-  runAsUser: 10001
+  runAsNonRoot: false
+  runAsUser: 0
 
 # Deshabilitar componentes distribuidos
 backend:
