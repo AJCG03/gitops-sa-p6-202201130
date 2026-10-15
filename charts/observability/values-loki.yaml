@@ -1,5 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════
 # Values definitivo para el chart oficial de Loki (grafana/loki) en ArgoCD
+# Modo SingleBinary autónomo (sin memberlist ni errores de anillo)
 # ═══════════════════════════════════════════════════════════════════
 
 deploymentMode: SingleBinary
@@ -7,9 +8,20 @@ deploymentMode: SingleBinary
 loki:
   auth_enabled: false
 
-  # Desactivar completamente el requisito de anillos distribuidos para SingleBinary
+  # Configuración común limpia sin dependencias de red externas
   commonConfig:
     replication_factor: 1
+    ring:
+      kvstore:
+        store: inmemory
+      instance_addr: 127.0.0.1
+
+  ingester:
+    lifecycler:
+      ring:
+        kvstore:
+          store: inmemory
+        replication_factor: 1
 
   storage:
     type: filesystem
