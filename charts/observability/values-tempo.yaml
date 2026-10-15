@@ -15,10 +15,6 @@ tempo:
       cpu: 150m
       memory: 384Mi   # ⬅️ Aumentado de 192Mi a 384Mi para evitar OOMKilled (Exit Code 137)
 
-  # ⬇️ Solución al consumo masivo de memoria que causaba los reinicios
-  extraArgs:
-    - -mem-ballast-size-mbs=32
-
   retention: 24h
 
   storage:
