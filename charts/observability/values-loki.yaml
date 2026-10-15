@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════
 # Values para el chart oficial de Loki (grafana/loki) — CORREGIDO
-# Modo singleBinary: 1 pod autónomo con almacenamiento en memoria local
+# Modo singleBinary: 1 pod autónomo sin dependencias de red de clúster
 # Optimizado para GKE (3Gi PVC, 384Mi RAM Limit)
 # ═══════════════════════════════════════════════════════════════════
 
@@ -9,7 +9,6 @@ deploymentMode: SingleBinary
 loki:
   auth_enabled: false
 
-  # ⬇️ CORREGIDO: Usar 'inmemory' para evitar la búsqueda de servicios de red
   commonConfig:
     replication_factor: 1
     ring:
@@ -17,7 +16,6 @@ loki:
         store: inmemory
       instance_addr: 127.0.0.1
 
-  # ⬇️ CORREGIDO: Usar 'inmemory' en el lifecycler del ingester
   ingester:
     lifecycler:
       ring:
@@ -74,6 +72,8 @@ loki:
 
 singleBinary:
   replicas: 1
+  extraArgs:
+    - -target=all
   resources:
     requests:
       cpu: 50m
