@@ -1,41 +1,3 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: loki-config
-  namespace: observability
-data:
-  local-config.yaml: |
-    auth_enabled: false
-    server:
-      http_listen_port: 3100
-      grpc_listen_port: 9095
-    common:
-      path_prefix: /tmp/loki
-      storage:
-        filesystem:
-          chunks_directory: /tmp/loki/chunks
-          rules_directory: /tmp/loki/rules
-      replication_factor: 1
-      ring:
-        kvstore:
-          store: inmemory
-    schema_config:
-      configs:
-        - from: 2024-01-01
-          store: tsdb
-          object_store: filesystem
-          schema: v13
-          index:
-            prefix: index_
-            period: 24h
-    ruler:
-      storage:
-        type: local
-        local:
-          directory: /tmp/loki/rules
-    analytics:
-      reporting_enabled: false
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -56,7 +18,18 @@ spec:
           image: grafana/loki:3.0.0
           args:
             - "-target=all"
-            - "-config.file=/etc/loki/local-config.yaml"
+            - "-auth.enabled=false"
+            - "-server.http-listen-port=3100"
+            - "-server.grpc-listen-port=9095"
+            - "-common.storage.backend=filesystem"
+            - "-common.storage.filesystem.chunks-directory=/tmp/loki/chunks"
+            - "-common.storage.filesystem.rules-directory=/tmp/loki/rules"
+            - "-schema.config.configs[0].from=2024-01-01"
+            - "-schema.config.configs[0].store=tsdb"
+            - "-schema.config.configs[0].object_store=filesystem"
+            - "-schema.config.configs[0].schema=v13"
+            - "-schema.config.configs[0].index.prefix=index_"
+            - "-schema.config.configs[0].index.period=24h"
           resources:
             requests:
               cpu: 50m
@@ -64,11 +37,6 @@ spec:
             limits:
               cpu: 250m
               memory: 384Mi
-          volumeMounts:
-            - name: config
-              mountPath: /etc/loki
-            - name: storage
-              mountPath: /tmp/loki
           ports:
             - containerPort: 3100
               name: http
@@ -78,24 +46,14 @@ spec:
             httpGet:
               path: /ready
               port: 3100
-            initialDelaySeconds: 45
+            initialDelaySeconds: 15
             periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 6
           livenessProbe:
             httpGet:
               path: /ready
               port: 3100
-            initialDelaySeconds: 45
+            initialDelaySeconds: 15
             periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 3
-      volumes:
-        - name: config
-          configMap:
-            name: loki-config
-        - name: storage
-          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
