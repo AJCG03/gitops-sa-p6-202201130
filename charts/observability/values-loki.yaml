@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════
 # Values para el chart oficial de Loki (grafana/loki) — CORREGIDO
-# Modo singleBinary: 1 pod autónomo con tiempos de sonda ajustados y fsGroup policy
+# Modo singleBinary: 1 pod autónomo con memberlist para evitar 'empty ring'
 # Optimizado para GKE (3Gi PVC, 384Mi RAM Limit)
 # ═══════════════════════════════════════════════════════════════════
 
@@ -9,18 +9,20 @@ deploymentMode: SingleBinary
 loki:
   auth_enabled: false
 
+  # ⬇️ CORREGIDO: Usar memberlist en el commonConfig para evitar el error 'empty ring'
   commonConfig:
     replication_factor: 1
     ring:
       kvstore:
-        store: inmemory
+        store: memberlist
       instance_addr: 127.0.0.1
 
+  # ⬇️ CORREGIDO: Usar memberlist en el lifecycler del ingester
   ingester:
     lifecycler:
       ring:
         kvstore:
-          store: inmemory
+          store: memberlist
         replication_factor: 1
 
   storage:
