@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════
 # Values para el chart oficial de Loki (grafana/loki) — CORREGIDO
-# Modo singleBinary: 1 pod autónomo con tiempos de sonda ajustados
+# Modo singleBinary: 1 pod autónomo con tiempos de sonda ajustados y fsGroup policy
 # Optimizado para GKE (3Gi PVC, 384Mi RAM Limit)
 # ═══════════════════════════════════════════════════════════════════
 
@@ -85,6 +85,10 @@ singleBinary:
     size: 3Gi
     accessModes:
       - ReadWriteOnce
+  # ⬇️ Optimización de permisos de volumen para evitar bloqueos al iniciar
+  podSecurityContext:
+    fsGroup: 10001
+    fsGroupChangePolicy: "OnRootMismatch"
   # ⬇️ Aumento del tiempo de espera para evitar el fallo 503 inicial de Readiness Probe
   readinessProbe:
     initialDelaySeconds: 45
