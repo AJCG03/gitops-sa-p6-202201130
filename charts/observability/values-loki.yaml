@@ -24,11 +24,20 @@ loki:
     ingestion_burst_size_mb: 10
     max_streams_per_user: 2000
     max_entries_limit_per_query: 5000
+    # ⬇️ NUEVO: protección por stream
+    per_stream_rate_limit: 3MB
+    per_stream_rate_limit_burst: 6MB
+    max_global_streams_per_user: 2500
+    max_query_series: 500
+    max_query_parallelism: 16
   compactor:
     working_directory: /var/loki/compactor
     retention_enabled: true
     delete_request_store: filesystem
     compaction_interval: 10m
+    # ⬇️ NUEVO: borrado más rápido
+    retention_delete_delay: 30m
+    retention_delete_worker_count: 50
   schemaConfig:
     configs:
       - from: "2024-01-01"
@@ -63,7 +72,6 @@ singleBinary:
   nodeSelector: {}
   tolerations: []
 
-# Deshabilitar TODOS los componentes distribuidos
 backend:
   replicas: 0
 read:
@@ -92,11 +100,6 @@ ruler:
   enabled: false
   replicas: 0
 
-# ═══════════════════════════════════════════════════════════════════
-#  CRÍTICO: DESACTIVAR LOS CACHES
-#  Sin esto, Helm crea pods memcached con 10 GB de RAM que nunca
-#  caben en nodos e2-standard-2 y quedan en Pending eternamente.
-# ═══════════════════════════════════════════════════════════════════
 chunksCache:
   enabled: false
   replicas: 0
@@ -107,7 +110,6 @@ resultsCache:
   replicas: 0
   allocatedMemory: 0
 
-# Deshabilitar otros componentes opcionales
 lokiCanary:
   enabled: false
 
