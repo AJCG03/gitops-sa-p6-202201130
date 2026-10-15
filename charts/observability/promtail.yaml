@@ -1,8 +1,9 @@
 # ═══════════════════════════════════════════════════════════════════
-# Promtail — Agente de recolección de logs (DaemonSet, 1 por nodo)
-# FIX P10:
-#   - trace_id y span_id movidos a structured_metadata (NO labels)
-#   - Drop de /health, /ready, /metrics para reducir 80% del volumen
+# Promtail — FIX P10 DEFINITIVO
+# - trace_id/span_id → structured_metadata (NO crean streams)
+# - Solo labels de baja cardinalidad
+# - Drop de health checks
+# - Elimina filename, pod, container, node, stream de labels
 # ═══════════════════════════════════════════════════════════════════
 
 apiVersion: v1
@@ -77,6 +78,10 @@ data:
 
     scrape_configs:
       - job_name: sa-p6-pods
+        # ⬅️ FIX P10: solo procesar logs desde ahora, no históricos
+        # (evita el error "timestamp too old")
+        tail_from_end: true
+        
         kubernetes_sd_configs:
           - role: pod
             namespaces:
@@ -93,16 +98,13 @@ data:
                 timestamp: timestamp
                 trace_id: trace_id
                 span_id: span_id
-                req_url: req.url           # ⬅️ extraer URL para dropear health
-          # ⬅️ FIX P10: dropear health checks (reduce 80-90%)
+                req_url: req.url
           - drop:
               source: req_url
               expression: "^/(health|ready|metrics|livez|readyz)$"
-          # ⬅️ FIX P10: solo labels de BAJA cardinalidad
           - labels:
               level:
               service:
-          # ⬅️ FIX P10: trace_id/span_id como structured metadata (NO crean streams)
           - structured_metadata:
               trace_id:
               span_id:
@@ -116,19 +118,22 @@ data:
               source: message
 
         relabel_configs:
+          # Solo namespace sa-p6
           - source_labels: [__meta_kubernetes_namespace]
             action: keep
             regex: sa-p6
-          - source_labels: [__meta_kubernetes_pod_name]
-            target_label: pod
-          - source_labels: [__meta_kubernetes_pod_container_name]
-            target_label: container
+          
+          # ⬅️ FIX P10: SOLO labels de baja cardinalidad
           - source_labels: [__meta_kubernetes_namespace]
             target_label: namespace
           - source_labels: [__meta_kubernetes_pod_label_app]
             target_label: app
-          - source_labels: [__meta_kubernetes_pod_node_name]
-            target_label: node
+          
+          # ⬅️ FIX P10: ELIMINAR labels de alta cardinalidad
+          - action: labeldrop
+            regex: "pod|container|node|stream|filename|service_name"
+          
+          # Path del log
           - source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
             target_label: __path__
             separator: /
