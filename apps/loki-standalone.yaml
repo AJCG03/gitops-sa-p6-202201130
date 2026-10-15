@@ -18,6 +18,7 @@ spec:
           image: grafana/loki:3.0.0
           args:
             - "-target=all"
+            - "-config.file=/etc/loki/local-config.yaml"
           resources:
             requests:
               cpu: 50m
