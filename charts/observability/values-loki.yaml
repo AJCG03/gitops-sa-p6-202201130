@@ -1,10 +1,13 @@
 # ═══════════════════════════════════════════════════════════════════
 # Values para Loki — SingleBinary con config.yaml INYECTADO
 # FIX P10 DEFINITIVO:
-#   - instance_addr: 127.0.0.1 (SingleBinary, mismo pod)
+#   - interface_names: [eth0] en el ingester (registra en el ring)
+#   - instance_addr: 127.0.0.1
 #   - instance_port: 9095 (gRPC)
 #   - -target=all + -query-scheduler.use-scheduler-ring=false
 #   - WAL en /var/loki/wal
+#   - lifecycler con address/port explícitos
+#   - ingester_client configurado
 #   - SIN compactor.ring ni shared_store
 # ═══════════════════════════════════════════════════════════════════
 
@@ -48,10 +51,27 @@ loki:
         enabled: true
         dir: /var/loki/wal
       lifecycler:
+        address: 127.0.0.1
+        port: 9095
         ring:
           kvstore:
             store: inmemory
           replication_factor: 1
+        final_sleep: 0s
+        num_tokens: 512
+        heartbeat_period: 5s
+        join_after: 0s
+        observe_period: 0s
+        interface_names:
+          - eth0
+
+    ingester_client:
+      grpc_client_config:
+        max_recv_msg_size: 104857600
+        max_send_msg_size: 104857600
+      pool_config:
+        check_interval: 1s
+        health_check_ingesters: true
 
     distributor:
       ring:
@@ -65,7 +85,7 @@ loki:
 
     compactor:
       working_directory: /var/loki/compactor
-      retention_enabled: true
+      retention_enabled: false
       delete_request_store: filesystem
       compaction_interval: 10m
       retention_delete_delay: 30m
@@ -109,7 +129,6 @@ singleBinary:
   extraArgs:
     - -target=all
     - -query-scheduler.use-scheduler-ring=false
-    - -config.expand-env=true
   resources:
     requests:
       cpu: 50m
