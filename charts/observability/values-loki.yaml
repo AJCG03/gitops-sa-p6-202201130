@@ -1,7 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════
-# Values para el chart oficial de Loki (grafana/loki) — CORREGIDO
-# Modo singleBinary: 1 pod autónomo sin dependencias de red de clúster
-# Optimizado para GKE (3Gi PVC, 384Mi RAM Limit)
+# Values definitivo para el chart oficial de Loki (grafana/loki) en ArgoCD
 # ═══════════════════════════════════════════════════════════════════
 
 deploymentMode: SingleBinary
@@ -9,19 +7,9 @@ deploymentMode: SingleBinary
 loki:
   auth_enabled: false
 
+  # Desactivar completamente el requisito de anillos distribuidos para SingleBinary
   commonConfig:
     replication_factor: 1
-    ring:
-      kvstore:
-        store: inmemory
-      instance_addr: 127.0.0.1
-
-  ingester:
-    lifecycler:
-      ring:
-        kvstore:
-          store: inmemory
-        replication_factor: 1
 
   storage:
     type: filesystem
