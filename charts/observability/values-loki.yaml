@@ -1,11 +1,10 @@
 # ═══════════════════════════════════════════════════════════════════
-# Values para Loki — SingleBinary, chart 6.6.4 / Loki 3.0
-# FIX P10 FINAL:
-#   - instance_port a 9095 (gRPC) para comunicación interna del ring
-#   - extraArgs: [-target=all] — fuerza todos los componentes en un proceso
-#   - ring inmemory (evita memberlist DNS)
-#   - fsGroup TEMPORAL a 0 para evitar chown de 180k archivos
-#   - Límites correctos (sin campos inválidos en Loki 3.0)
+# Values para Loki — SingleBinary con config.yaml INYECTADO
+# FIX P10 DEFINITIVO:
+#   - Se inyecta TODO el config.yaml manualmente para evitar que el chart
+#     sobrescriba el ring con memberlist
+#   - ring inmemory con instance_port 9095 (gRPC)
+#   - fsGroup TEMPORAL a 0
 # ═══════════════════════════════════════════════════════════════════
 
 deploymentMode: SingleBinary
@@ -13,72 +12,95 @@ deploymentMode: SingleBinary
 loki:
   auth_enabled: false
 
-  # ⬅️ FIX CRÍTICO: instance_port a 9095 (gRPC)
-  #    Los componentes internos de Loki se comunican por gRPC, no HTTP
-  commonConfig:
-    replication_factor: 1
-    ring:
-      kvstore:
-        store: inmemory
-      instance_addr: 127.0.0.1
-      instance_port: 9095
+  # ⬅️ FIX DEFINITIVO: inyectar TODO el config.yaml manualmente
+  #    Así el chart NO lo genera y respeta nuestra config del ring
+  config: |
+    auth_enabled: false
 
-  ingester:
-    chunk_idle_period: 5m
-    chunk_target_size: 1048576
-    max_chunk_age: 30m
-    chunk_encoding: snappy
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 9095
+      log_level: warn
+      grpc_server_max_recv_msg_size: 104857600
+      grpc_server_max_send_msg_size: 104857600
+      grpc_server_max_concurrent_streams: 1000
 
-  storage:
-    type: filesystem
-    filesystem:
-      chunks_directory: /var/loki/chunks
-      rules_directory: /var/loki/rules
+    common:
+      replication_factor: 1
+      ring:
+        kvstore:
+          store: inmemory
+        instance_addr: 127.0.0.1
+        instance_port: 9095
 
-  limits_config:
-    retention_period: 24h
-    max_query_lookback: 24h
-    reject_old_samples: true
-    reject_old_samples_max_age: 24h
-    ingestion_rate_mb: 5
-    ingestion_burst_size_mb: 10
-    max_streams_per_user: 10000
-    max_global_streams_per_user: 5000
-    max_entries_limit_per_query: 5000
-    per_stream_rate_limit: 3MB
-    per_stream_rate_limit_burst: 6MB
-    max_query_series: 500
-    max_query_parallelism: 16
-    max_label_names_per_series: 15
+    ingester:
+      chunk_idle_period: 5m
+      chunk_target_size: 1048576
+      max_chunk_age: 30m
+      chunk_encoding: snappy
+      lifecycler:
+        ring:
+          kvstore:
+            store: inmemory
+          replication_factor: 1
 
-  compactor:
-    working_directory: /var/loki/compactor
-    retention_enabled: true
-    delete_request_store: filesystem
-    compaction_interval: 10m
-    retention_delete_delay: 30m
-    retention_delete_worker_count: 50
+    distributor:
+      ring:
+        kvstore:
+          store: inmemory
 
-  schemaConfig:
-    configs:
-      - from: "2024-01-01"
-        store: tsdb
-        object_store: filesystem
-        schema: v13
-        index:
-          prefix: index_
-          period: 24h
+    ruler:
+      ring:
+        kvstore:
+          store: inmemory
 
-  server:
-    http_listen_port: 3100
-    grpc_listen_port: 9095
-    log_level: warn
-    grpc_server_max_recv_msg_size: 104857600
-    grpc_server_max_send_msg_size: 104857600
-    grpc_server_max_concurrent_streams: 1000
+    compactor:
+      working_directory: /var/loki/compactor
+      retention_enabled: true
+      delete_request_store: filesystem
+      compaction_interval: 10m
+      retention_delete_delay: 30m
+      retention_delete_worker_count: 50
+      ring:
+        kvstore:
+          store: inmemory
 
-  analytics:
-    reporting_enabled: false
+    limits_config:
+      retention_period: 24h
+      max_query_lookback: 24h
+      reject_old_samples: true
+      reject_old_samples_max_age: 24h
+      ingestion_rate_mb: 5
+      ingestion_burst_size_mb: 10
+      max_streams_per_user: 10000
+      max_global_streams_per_user: 5000
+      max_entries_limit_per_query: 5000
+      per_stream_rate_limit: 3MB
+      per_stream_rate_limit_burst: 6MB
+      max_query_series: 500
+      max_query_parallelism: 16
+      max_label_names_per_series: 15
+
+    schema_config:
+      configs:
+        - from: "2024-01-01"
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+
+    storage_config:
+      filesystem:
+        directory: /var/loki/chunks
+      tsdb_shipper:
+        active_index_directory: /var/loki/tsdb-index
+        cache_location: /var/loki/tsdb-cache
+        shared_store: filesystem
+
+    analytics:
+      reporting_enabled: false
 
 singleBinary:
   replicas: 1
@@ -126,7 +148,7 @@ containerSecurityContext:
   runAsNonRoot: false
   runAsUser: 0
 
-# Deshabilitar componentes distribuidos
+# Deshabilitar TODOS los componentes distribuidos
 backend:
   replicas: 0
 read:
