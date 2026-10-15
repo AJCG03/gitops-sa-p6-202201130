@@ -1,64 +1,3 @@
-# ═══════════════════════════════════════════════════════════════════
-# Promtail — FIX P10 DEFINITIVO
-# - trace_id/span_id → structured_metadata (NO crean streams)
-# - Solo labels de baja cardinalidad
-# - Drop de health checks
-# - Elimina filename, pod, container, node, stream de labels
-# ═══════════════════════════════════════════════════════════════════
-
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: promtail
-  namespace: observability
-  labels:
-    app.kubernetes.io/name: promtail
-    app.kubernetes.io/part-of: sa-p6-observability
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: promtail
-  labels:
-    app.kubernetes.io/name: promtail
-rules:
-  - apiGroups: [""]
-    resources:
-      - nodes
-      - nodes/proxy
-      - services
-      - endpoints
-      - pods
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["extensions"]
-    resources:
-      - ingresses
-    verbs: ["get", "list", "watch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: promtail
-  labels:
-    app.kubernetes.io/name: promtail
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: promtail
-subjects:
-  - kind: ServiceAccount
-    name: promtail
-    namespace: observability
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: promtail-config
-  namespace: observability
-  labels:
-    app.kubernetes.io/name: promtail
-data:
-  promtail.yaml: |
     server:
       http_listen_port: 9080
       grpc_listen_port: 0
@@ -72,16 +11,13 @@ data:
         backoff_config:
           min_period: 500ms
           max_period: 5m
-          max_retries: 10
+          max_retries: 5
         batchwait: 1s
         batchsize: 1048576
+        timeout: 10s
 
     scrape_configs:
       - job_name: sa-p6-pods
-        # ⬅️ FIX P10: solo procesar logs desde ahora, no históricos
-        # (evita el error "timestamp too old")
-        tail_from_end: true
-        
         kubernetes_sd_configs:
           - role: pod
             namespaces:
@@ -118,94 +54,16 @@ data:
               source: message
 
         relabel_configs:
-          # Solo namespace sa-p6
           - source_labels: [__meta_kubernetes_namespace]
             action: keep
             regex: sa-p6
-          
-          # ⬅️ FIX P10: SOLO labels de baja cardinalidad
           - source_labels: [__meta_kubernetes_namespace]
             target_label: namespace
           - source_labels: [__meta_kubernetes_pod_label_app]
             target_label: app
-          
-          # ⬅️ FIX P10: ELIMINAR labels de alta cardinalidad
           - action: labeldrop
             regex: "pod|container|node|stream|filename|service_name"
-          
-          # Path del log
           - source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
             target_label: __path__
             separator: /
             replacement: /var/log/pods/*$1/*.log
----
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: promtail
-  namespace: observability
-  labels:
-    app.kubernetes.io/name: promtail
-    app.kubernetes.io/part-of: sa-p6-observability
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: promtail
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: promtail
-    spec:
-      serviceAccountName: promtail
-      tolerations:
-        - key: node-role.kubernetes.io/master
-          operator: Exists
-          effect: NoSchedule
-        - key: node-role.kubernetes.io/control-plane
-          operator: Exists
-          effect: NoSchedule
-      containers:
-        - name: promtail
-          image: grafana/promtail:3.1.1
-          imagePullPolicy: IfNotPresent
-          args:
-            - -config.file=/etc/promtail/promtail.yaml
-          resources:
-            requests:
-              cpu: 30m
-              memory: 48Mi
-            limits:
-              cpu: 150m
-              memory: 192Mi
-          env:
-            - name: HOSTNAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-          ports:
-            - containerPort: 9080
-              name: http-metrics
-              protocol: TCP
-          volumeMounts:
-            - name: config
-              mountPath: /etc/promtail
-            - name: run
-              mountPath: /run/promtail
-            - name: varlog
-              mountPath: /var/log
-              readOnly: true
-          securityContext:
-            readOnlyRootFilesystem: true
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
-      volumes:
-        - name: config
-          configMap:
-            name: promtail-config
-        - name: run
-          emptyDir: {}
-        - name: varlog
-          hostPath:
-            path: /var/log
