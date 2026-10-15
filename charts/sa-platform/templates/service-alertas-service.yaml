@@ -47,5 +47,6 @@ spec:
   ports:
     - port: 3004
       targetPort: 3004
+      name: http              # ⬅️ AÑADIR ESTA LÍNEA
   selector:
     app: alertas-service

@@ -34,7 +34,7 @@ spec:
   selector:
     app: auth-service
 ---
-# Service principal (compatibilidad)
+# Service principal
 apiVersion: v1
 kind: Service
 metadata:
@@ -47,5 +47,6 @@ spec:
   ports:
     - port: 3000
       targetPort: 3000
+      name: http              # ⬅️ AÑADIR
   selector:
     app: auth-service

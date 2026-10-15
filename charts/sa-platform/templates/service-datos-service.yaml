@@ -47,5 +47,6 @@ spec:
   ports:
     - port: 3003
       targetPort: 3003
+      name: http              # ⬅️ AÑADIR
   selector:
     app: datos-service

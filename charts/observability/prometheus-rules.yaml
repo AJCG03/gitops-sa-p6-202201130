@@ -1,3 +1,12 @@
+# ═══════════════════════════════════════════════════════════════════
+# PrometheusRule: SLOs del sistema sa-p6
+#
+# SLO-01: Disponibilidad de sensores-service 99.9% / 30d
+# SLO-02: Latencia p99 de datos-service < 250ms / 7d
+#
+# Fuente de métricas: gateway_* del api-gateway-proxy
+# Filtrado por label "service" (mapeo path → servicio)
+# ═══════════════════════════════════════════════════════════════════
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -8,33 +17,45 @@ metadata:
     app.kubernetes.io/part-of: sa-p6-observability
 spec:
   groups:
+    # ═══════════════════════════════════════════════════════════════
+    # SLO-01: DISPONIBILIDAD DE SENSORES-SERVICE
+    # Objetivo: 99.9% de requests exitosos (no 5xx) en 30 días
+    # Presupuesto de error: 0.1% = 0.001
+    # ═══════════════════════════════════════════════════════════════
     - name: slo-sensores-availability
       interval: 30s
       rules:
-        # SLI: ratio de requests exitosos (no-5xx) en 5m
+        # SLI: ratio de requests exitosos en 5m
         - record: sli:sensores_availability:ratio5m
           expr: |
-            sum(rate(http_requests_total{service="sensores-service",status!~"5.."}[5m]))
+            sum(rate(gateway_requests_total{service="sensores-service",status!~"5.."}[5m]))
             /
-            sum(rate(http_requests_total{service="sensores-service"}[5m]))
+            sum(rate(gateway_requests_total{service="sensores-service"}[5m]))
+            or vector(0)
 
-        # Presupuesto consumido en ventana de 30d (usando increase con subquery)
+        # Presupuesto consumido en 30d
         # SLO: 99.9% → presupuesto 0.1% = 0.001
         - record: slo:sensores_availability:budget_consumed30d
           expr: |
             (
               1 - (
-                sum(increase(http_requests_total{service="sensores-service",status!~"5.."}[30d]))
+                sum(increase(gateway_requests_total{service="sensores-service",status!~"5.."}[30d]))
                 /
-                sum(increase(http_requests_total{service="sensores-service"}[30d]))
+                sum(increase(gateway_requests_total{service="sensores-service"}[30d]))
               )
             ) / 0.001
+            or vector(0)
 
         # Burn rate a corto plazo (para alertas rápidas)
         - record: slo:sensores_availability:burn_rate5m
           expr: |
             (1 - sli:sensores_availability:ratio5m) / 0.001
 
+    # ═══════════════════════════════════════════════════════════════
+    # SLO-02: LATENCIA p99 DE DATOS-SERVICE
+    # Objetivo: 99% de requests GET < 250ms en 7 días
+    # Presupuesto de error: 1% = 0.01
+    # ═══════════════════════════════════════════════════════════════
     - name: slo-datos-latency
       interval: 30s
       rules:
@@ -42,29 +63,31 @@ spec:
         - record: sli:datos_latency_p99:seconds5m
           expr: |
             histogram_quantile(0.99,
-              sum(rate(http_request_duration_seconds_bucket{service="datos-service",method="GET"}[5m])) by (le)
+              sum(rate(gateway_request_duration_seconds_bucket{service="datos-service"}[5m])) by (le)
             )
+            or vector(0)
 
-        # Presupuesto consumido en ventana de 7d
+        # Presupuesto consumido en 7d
         # SLO: 99% de requests < 250ms → presupuesto 1% = 0.01
         - record: slo:datos_latency:budget_consumed7d
           expr: |
             (
               1 - (
-                sum(increase(http_request_duration_seconds_bucket{service="datos-service",method="GET",le="0.25"}[7d]))
+                sum(increase(gateway_request_duration_seconds_bucket{service="datos-service",le="0.25"}[7d]))
                 /
-                sum(increase(http_request_duration_seconds_count{service="datos-service",method="GET"}[7d]))
+                sum(increase(gateway_request_duration_seconds_count{service="datos-service"}[7d]))
               )
             ) / 0.01
+            or vector(0)
 
         # Burn rate a corto plazo
         - record: slo:datos_latency:burn_rate5m
           expr: |
             (
-              sum(rate(http_request_duration_seconds_count{service="datos-service",method="GET"}[5m]))
+              sum(rate(gateway_request_duration_seconds_count{service="datos-service"}[5m]))
               -
-              sum(rate(http_request_duration_seconds_bucket{service="datos-service",method="GET",le="0.25"}[5m]))
+              sum(rate(gateway_request_duration_seconds_bucket{service="datos-service",le="0.25"}[5m]))
             )
             /
-            sum(rate(http_request_duration_seconds_count{service="datos-service",method="GET"}[5m]))
+            sum(rate(gateway_request_duration_seconds_count{service="datos-service"}[5m]))
             / 0.01

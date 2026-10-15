@@ -1,14 +1,8 @@
 # ═══════════════════════════════════════════════════════════════════
 # PrometheusRule: Alertas por consumo de presupuesto de error
 #
-# Estas alertas NO son por umbral instantáneo. Se disparan cuando el
-# ritmo de consumo del presupuesto de error (burn rate) sugiere que
-# el SLO se agotará antes del final de la ventana.
-#
-# Cada alerta:
-#   - Está asociada a un SLO específico
-#   - Enlaza a un runbook de atención
-#   - Justifica por qué amerita intervención humana
+# SLO-01: Disponibilidad de sensores-service 99.9% / 30d
+# SLO-02: Latencia p99 de datos-service < 250ms / 7d
 # ═══════════════════════════════════════════════════════════════════
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
@@ -30,13 +24,14 @@ spec:
         # SLO-01: Disponibilidad de sensores-service 99.9% / 30d
         # Presupuesto: 0.1% = 0.001
         #
-        # La alerta se dispara cuando el presupuesto consumido supera
-        # el 50% en la ventana de 30d.
+        # Se dispara cuando el presupuesto consumido supera el 50%
+        # en la ventana de 30d.
         #
         # ¿Por qué amerita intervención humana?
-        #   Un consumo del 50% del presupuesto mensual en cualquier
-        #   momento del mes indica una tendencia insostenible. Si no
-        #   se investiga, el SLO se agotará antes de fin de mes.
+        #   Un consumo del 50% del presupuesto mensual indica una
+        #   tendencia insostenible. Si no se investiga, el SLO se
+        #   agotará antes de fin de mes y los dashboards de tendencias
+        #   mostrarán huecos visibles.
         # ═══════════════════════════════════════════════════════════════
         - alert: SensoresErrorBudgetBurn
           expr: slo:sensores_availability:budget_consumed30d > 0.5
@@ -52,10 +47,11 @@ spec:
               El presupuesto de error del SLO de disponibilidad de
               sensores-service está al {{ $value | humanizePercentage }}
               consumido en la ventana de 30d.
-              
+
               Si la tendencia continúa, el presupuesto se agotará antes
-              de fin de mes.
-              
+              de fin de mes. Los dashboards de tendencias mostrarán
+              huecos visibles.
+
               Revisar el runbook para diagnóstico.
             runbook_url: "https://github.com/AJCG03/gitops-sa-p6-202201130/blob/main/P10/runbooks/sensores-availability.md"
 
@@ -65,8 +61,8 @@ spec:
         # SLO-02: Latencia p99 de datos-service < 250ms / 7d
         # Presupuesto: 1% de peticiones pueden exceder 250ms
         #
-        # La alerta se dispara cuando el presupuesto consumido supera
-        # el 50% en la ventana de 7d.
+        # Se dispara cuando el presupuesto consumido supera el 50%
+        # en la ventana de 7d.
         #
         # ¿Por qué amerita intervención humana?
         #   El consumo del 50% en 7 días es un indicador temprano de
@@ -87,8 +83,9 @@ spec:
               El presupuesto de error del SLO de latencia de datos-service
               está al {{ $value | humanizePercentage }} consumido en la
               ventana de 7d.
-              
+
               Si la tendencia continúa, el SLO se violará en pocos días.
-              
+              Los operadores empezarán a notar lag al cambiar entre vistas.
+
               Revisar el runbook para diagnóstico.
             runbook_url: "https://github.com/AJCG03/gitops-sa-p6-202201130/blob/main/P10/runbooks/datos-latency.md"

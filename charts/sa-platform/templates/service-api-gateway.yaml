@@ -1,4 +1,6 @@
-# Service estable (recibe tráfico de usuarios)
+# ═══════════════════════════════════════════════════════════════
+# Service: api-gateway-stable (tráfico de usuarios)
+# ═══════════════════════════════════════════════════════════════
 apiVersion: v1
 kind: Service
 metadata:
@@ -10,13 +12,15 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - port: 80
+    - name: http-proxy
+      port: 80
       targetPort: 8080
-      name: http
   selector:
     app: api-gateway
 ---
-# Service canary (recibe tráfico de prueba)
+# ═══════════════════════════════════════════════════════════════
+# Service: api-gateway-canary (tráfico de prueba)
+# ═══════════════════════════════════════════════════════════════
 apiVersion: v1
 kind: Service
 metadata:
@@ -28,13 +32,15 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - port: 80
+    - name: http-proxy
+      port: 80
       targetPort: 8080
-      name: http
   selector:
     app: api-gateway
 ---
-# Service principal (compatibilidad con lo que ya tienes desplegado)
+# ═══════════════════════════════════════════════════════════════
+# Service: api-gateway (principal - usado por el ServiceMonitor)
+# ═══════════════════════════════════════════════════════════════
 apiVersion: v1
 kind: Service
 metadata:
@@ -43,9 +49,13 @@ metadata:
   labels:
     app: api-gateway
 spec:
-  type: {{ .Values.api_gateway.service.type | default "LoadBalancer" }}
+  type: ClusterIP
   ports:
-    - port: 80
+    - name: http-proxy
+      port: 8080
       targetPort: 8080
+    - name: http-nginx
+      port: 8081
+      targetPort: 8081
   selector:
     app: api-gateway
