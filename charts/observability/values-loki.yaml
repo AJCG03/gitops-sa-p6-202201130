@@ -1,13 +1,19 @@
 # ═══════════════════════════════════════════════════════════════════
 # Values para el chart oficial de Loki (grafana/loki)
 # Modo singleBinary: 1 pod que hace todo
-# Optimizado para GKE con nodos e2-standard-2 (2 vCPU, 8 GB RAM)
+# Optimizado para GKE con nodos de capacidad justa (3Gi PVC, 96Mi RAM)
 # ═══════════════════════════════════════════════════════════════════
 
 deploymentMode: SingleBinary
 
 loki:
   auth_enabled: false
+  
+  # ⬇️ Solución al error de resolución de "loki-memberlist" en modo SingleBinary
+  memberlist_config:
+    join_members: []
+    bind_port: 7946
+
   commonConfig:
     replication_factor: 1
   storage:
@@ -24,7 +30,6 @@ loki:
     ingestion_burst_size_mb: 10
     max_streams_per_user: 2000
     max_entries_limit_per_query: 5000
-    # ⬇️ NUEVO: protección por stream
     per_stream_rate_limit: 3MB
     per_stream_rate_limit_burst: 6MB
     max_global_streams_per_user: 2500
@@ -35,7 +40,6 @@ loki:
     retention_enabled: true
     delete_request_store: filesystem
     compaction_interval: 10m
-    # ⬇️ NUEVO: borrado más rápido
     retention_delete_delay: 30m
     retention_delete_worker_count: 50
   schemaConfig:
@@ -66,7 +70,7 @@ singleBinary:
   persistence:
     enabled: true
     storageClass: standard-rwo
-    size: 3Gi
+    size: 3Gi  # ⬅️ Mantenido en 3Gi para ajustarse a tus recursos de GKE
     accessModes:
       - ReadWriteOnce
   nodeSelector: {}
