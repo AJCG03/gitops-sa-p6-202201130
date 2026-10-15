@@ -1,6 +1,9 @@
 # ═══════════════════════════════════════════════════════════════════
 # OpenTelemetry Collector — Deployment
-# FIX P10: añadido structured_metadata y atributos de bajo consumo
+# FIX P10:
+#   - Eliminado exporter "loki" (Promtail ya envía logs a Loki)
+#   - Eliminado pipeline "logs" (redundante)
+#   - El Collector solo maneja: traces → Tempo, metrics → Prometheus
 # ═══════════════════════════════════════════════════════════════════
 
 apiVersion: v1
@@ -48,38 +51,18 @@ data:
             action: upsert
 
     exporters:
+      # ⬅️ Métricas → Prometheus (scrapeado en :8889)
       prometheus:
         endpoint: "0.0.0.0:8889"
         namespace: otel
         const_labels:
           cluster: practica6-cluster
 
+      # ⬅️ Trazas → Tempo
       otlp/tempo:
         endpoint: tempo.observability.svc.cluster.local:4317
         tls:
           insecure: true
-
-      loki:
-        endpoint: http://loki.observability.svc.cluster.local:3100/loki/api/v1/push
-        # ⬅️ FIX P10: solo labels de baja cardinalidad
-        default_labels_enabled:
-          exporter: false
-          job: true
-          instance: false
-          level: true
-        # ⬅️ FIX P10: los atributos de alta cardinalidad van a structured metadata
-        labels:
-          attributes:
-            level: "level"
-            service_name: "service"
-        structured_metadata:
-          trace_id: "trace_id"
-          span_id: "span_id"
-        retry_on_failure:
-          enabled: true
-          initial_interval: 5s
-          max_interval: 30s
-          max_elapsed_time: 300s
 
     extensions:
       health_check:
@@ -96,10 +79,7 @@ data:
           receivers: [otlp]
           processors: [memory_limiter, resource, batch]
           exporters: [prometheus]
-        logs:
-          receivers: [otlp]
-          processors: [memory_limiter, resource, batch]
-          exporters: [loki]
+        # ⬅️ FIX P10: pipeline "logs" ELIMINADO (Promtail ya los envía a Loki)
       telemetry:
         logs:
           level: warn
