@@ -1,29 +1,23 @@
+
 # ═══════════════════════════════════════════════════════════════════
-# Values para el chart oficial de Loki (grafana/loki) — CORREGIDO
-# Modo singleBinary: 1 pod autónomo con memberlist para evitar 'empty ring'
-# Optimizado para GKE (3Gi PVC, 384Mi RAM Limit)
+# Values para el chart oficial de Loki (grafana/loki)
+# Modo SingleBinary: una sola réplica
+# Optimizado para GKE: PVC 3Gi y límite de memoria 384Mi
 # ═══════════════════════════════════════════════════════════════════
 
 deploymentMode: SingleBinary
 
+# ───────────────────────────────────────────────────────────────────
+# CONFIGURACIÓN PRINCIPAL DE LOKI
+# ───────────────────────────────────────────────────────────────────
 loki:
   auth_enabled: false
 
-  # ⬇️ CORREGIDO: Usar memberlist en el commonConfig para evitar el error 'empty ring'
   commonConfig:
     replication_factor: 1
     ring:
       kvstore:
         store: memberlist
-      instance_addr: 127.0.0.1
-
-  # ⬇️ CORREGIDO: Usar memberlist en el lifecycler del ingester
-  ingester:
-    lifecycler:
-      ring:
-        kvstore:
-          store: memberlist
-        replication_factor: 1
 
   storage:
     type: filesystem
@@ -34,15 +28,20 @@ loki:
   limits_config:
     retention_period: 24h
     max_query_lookback: 24h
+
     reject_old_samples: true
     reject_old_samples_max_age: 24h
+
     ingestion_rate_mb: 10
     ingestion_burst_size_mb: 20
+
     max_streams_per_user: 10000
     max_global_streams_per_user: 10000
     max_entries_limit_per_query: 5000
+
     per_stream_rate_limit: 10MB
     per_stream_rate_limit_burst: 20MB
+
     max_query_series: 500
     max_query_parallelism: 16
 
@@ -72,8 +71,21 @@ loki:
   analytics:
     reporting_enabled: false
 
+# ───────────────────────────────────────────────────────────────────
+# MEMBERLIST
+# Publicar endpoints aunque Loki no esté listo todavía.
+# Esto ayuda a evitar problemas de descubrimiento DNS al arrancar.
+# ───────────────────────────────────────────────────────────────────
+memberlist:
+  service:
+    publishNotReadyAddresses: true
+
+# ───────────────────────────────────────────────────────────────────
+# SINGLE BINARY
+# ───────────────────────────────────────────────────────────────────
 singleBinary:
   replicas: 1
+
   resources:
     requests:
       cpu: 50m
@@ -81,58 +93,79 @@ singleBinary:
     limits:
       cpu: 250m
       memory: 384Mi
+
   persistence:
     enabled: true
     storageClass: standard-rwo
     size: 3Gi
     accessModes:
       - ReadWriteOnce
-  # ⬇️ Optimización de permisos de volumen para evitar bloqueos al iniciar
+
   podSecurityContext:
     fsGroup: 10001
-    fsGroupChangePolicy: "OnRootMismatch"
-  # ⬇️ Aumento del tiempo de espera para evitar el fallo 503 inicial de Readiness Probe
+    fsGroupChangePolicy: OnRootMismatch
+
   readinessProbe:
     initialDelaySeconds: 45
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 6
+
   livenessProbe:
     initialDelaySeconds: 45
     periodSeconds: 10
     timeoutSeconds: 5
     failureThreshold: 3
+
   nodeSelector: {}
   tolerations: []
 
+# ───────────────────────────────────────────────────────────────────
+# DESACTIVAR COMPONENTES DISTRIBUIDOS
+# ───────────────────────────────────────────────────────────────────
 backend:
   replicas: 0
+
 read:
   replicas: 0
+
 write:
   replicas: 0
+
 ingester:
   replicas: 0
+
 querier:
   replicas: 0
+
 queryFrontend:
   replicas: 0
+
 queryScheduler:
   replicas: 0
+
 distributor:
   replicas: 0
+
 compactor:
   replicas: 0
+
 indexGateway:
   replicas: 0
+
 bloomCompactor:
   replicas: 0
+
 bloomGateway:
   replicas: 0
+
 ruler:
   enabled: false
   replicas: 0
 
+# ───────────────────────────────────────────────────────────────────
+# CACHÉS DESACTIVADAS PARA AHORRAR MEMORIA
+# ───────────────────────────────────────────────────────────────────
 chunksCache:
   enabled: false
   replicas: 0
@@ -143,6 +176,9 @@ resultsCache:
   replicas: 0
   allocatedMemory: 0
 
+# ───────────────────────────────────────────────────────────────────
+# COMPONENTES AUXILIARES DESACTIVADOS
+# ───────────────────────────────────────────────────────────────────
 lokiCanary:
   enabled: false
 
@@ -152,11 +188,14 @@ test:
 gateway:
   enabled: false
 
+promtail:
+  enabled: false
+
+# ───────────────────────────────────────────────────────────────────
+# MONITOREO
+# ───────────────────────────────────────────────────────────────────
 serviceMonitor:
   enabled: true
   labels:
     release: kube-prometheus-stack
   interval: 30s
-
-promtail:
-  enabled: false
