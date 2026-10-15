@@ -1,7 +1,40 @@
+# ═══════════════════════════════════════════════════════════════════
+# Values para Loki — SingleBinary con config.yaml INYECTADO
+# FIX P10 DEFINITIVO:
+#   - log_level: info (evita bug del ring en Loki 3.0)
+#   - probes DENTRO de loki (así los lee el chart)
+#   - initialDelaySeconds: 300, timeoutSeconds: 5, failureThreshold: 12
+#   - readOnlyRootFilesystem: false en containerSecurityContext
+#   - interface_names: [eth0] en el ingester
+#   - WAL en /var/loki/wal
+#   - SIN compactor.ring ni shared_store
+# ═══════════════════════════════════════════════════════════════════
+
 deploymentMode: SingleBinary
 
 loki:
   auth_enabled: false
+
+  # ⬅️ FIX: probes DENTRO de loki (el chart los lee así)
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: http-metrics
+    initialDelaySeconds: 300
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 12
+    successThreshold: 1
+
+  livenessProbe:
+    httpGet:
+      path: /ready
+      port: http-metrics
+    initialDelaySeconds: 600
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 6
+
   schemaConfig:
     configs:
       - from: "2024-01-01"
@@ -11,12 +44,15 @@ loki:
         index:
           prefix: index_
           period: 24h
+
   config: |
     auth_enabled: false
+
     server:
       http_listen_port: 3100
       grpc_listen_port: 9095
-      log_level: warn
+      log_level: info
+
     common:
       replication_factor: 1
       ring:
@@ -24,6 +60,7 @@ loki:
           store: inmemory
         instance_addr: 127.0.0.1
         instance_port: 9095
+
     ingester:
       chunk_idle_period: 5m
       chunk_target_size: 1048576
@@ -46,20 +83,24 @@ loki:
         observe_period: 0s
         interface_names:
           - eth0
+
     ingester_client:
       grpc_client_config:
         max_recv_msg_size: 104857600
         max_send_msg_size: 104857600
       pool_config:
         health_check_ingesters: true
+
     distributor:
       ring:
         kvstore:
           store: inmemory
+
     ruler:
       ring:
         kvstore:
           store: inmemory
+
     compactor:
       working_directory: /var/loki/compactor
       retention_enabled: false
@@ -67,6 +108,7 @@ loki:
       compaction_interval: 10m
       retention_delete_delay: 30m
       retention_delete_worker_count: 50
+
     limits_config:
       retention_period: 24h
       max_query_lookback: 24h
@@ -79,6 +121,7 @@ loki:
       max_entries_limit_per_query: 5000
       per_stream_rate_limit: 3MB
       per_stream_rate_limit_burst: 6MB
+
     schema_config:
       configs:
         - from: "2024-01-01"
@@ -88,12 +131,14 @@ loki:
           index:
             prefix: index_
             period: 24h
+
     storage_config:
       filesystem:
         directory: /var/loki/chunks
       tsdb_shipper:
         active_index_directory: /var/loki/tsdb-index
         cache_location: /var/loki/tsdb-cache
+
     analytics:
       reporting_enabled: false
 
@@ -118,26 +163,6 @@ singleBinary:
   nodeSelector: {}
   tolerations: []
 
-# ⬅️ FIX: probes a NIVEL RAÍZ (no dentro de singleBinary)
-readinessProbe:
-  httpGet:
-    path: /ready
-    port: http-metrics
-  initialDelaySeconds: 300
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 12
-  successThreshold: 1
-
-livenessProbe:
-  httpGet:
-    path: /ready
-    port: http-metrics
-  initialDelaySeconds: 600
-  periodSeconds: 30
-  timeoutSeconds: 5
-  failureThreshold: 6
-
 # ⬅️ FIX: securityContext a nivel raíz
 podSecurityContext:
   fsGroup: 0
@@ -150,32 +175,63 @@ containerSecurityContext:
   capabilities:
     drop:
       - ALL
-  readOnlyRootFilesystem: false    # ⬅️ CRÍTICO: false
+  readOnlyRootFilesystem: false
   runAsNonRoot: false
   runAsUser: 0
 
 # Deshabilitar componentes distribuidos
-backend: { replicas: 0 }
-read: { replicas: 0 }
-write: { replicas: 0 }
-ingester: { replicas: 0 }
-querier: { replicas: 0 }
-queryFrontend: { replicas: 0 }
-queryScheduler: { replicas: 0 }
-distributor: { replicas: 0 }
-compactor: { replicas: 0 }
-indexGateway: { replicas: 0 }
-bloomCompactor: { replicas: 0 }
-bloomGateway: { replicas: 0 }
-ruler: { enabled: false, replicas: 0 }
-chunksCache: { enabled: false, replicas: 0, allocatedMemory: 0 }
-resultsCache: { enabled: false, replicas: 0, allocatedMemory: 0 }
-lokiCanary: { enabled: false }
-test: { enabled: false }
-gateway: { enabled: false }
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+ingester:
+  replicas: 0
+querier:
+  replicas: 0
+queryFrontend:
+  replicas: 0
+queryScheduler:
+  replicas: 0
+distributor:
+  replicas: 0
+compactor:
+  replicas: 0
+indexGateway:
+  replicas: 0
+bloomCompactor:
+  replicas: 0
+bloomGateway:
+  replicas: 0
+ruler:
+  enabled: false
+  replicas: 0
+
+chunksCache:
+  enabled: false
+  replicas: 0
+  allocatedMemory: 0
+
+resultsCache:
+  enabled: false
+  replicas: 0
+  allocatedMemory: 0
+
+lokiCanary:
+  enabled: false
+
+test:
+  enabled: false
+
+gateway:
+  enabled: false
+
 serviceMonitor:
   enabled: true
   labels:
     release: kube-prometheus-stack
   interval: 30s
-promtail: { enabled: false }
+
+promtail:
+  enabled: false
