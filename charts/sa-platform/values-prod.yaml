@@ -5,20 +5,20 @@ global:
 # Usando v1.68 (existe en GHCR, construido por el pipeline)
 api_gateway:
   image:
-    tag: "v1.88"
+    tag: "v1.89"
 auth_service:
   image:
-    tag: "v1.88"
+    tag: "v1.89"
 sensores_service:
   image:
-    tag: "v1.88"
+    tag: "v1.89"
 datos_service:
   image:
-    tag: "v1.88"
+    tag: "v1.89"
 alertas_service:
   image:
-    tag: "v1.88"
+    tag: "v1.89"
 # ⬇️ NUEVO ⬇️
 api_gateway_proxy:
   image:
-    tag: "v1.88"
+    tag: "v1.89"
