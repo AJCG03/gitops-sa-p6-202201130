@@ -1,0 +1,15 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  creationTimestamp: null
+  name: ejemplo-secret
+  namespace: default
+spec:
+  encryptedData:
+    password: AgBUyZW3snlv0h8TyUCXs08CbO30aOBerXfZUPpg4cevtw/cmHmz7w/N8Wbj+v6XtYDsJ74/+fYW9c/sU8q6NK3yCsI8i21bCPc5vis9gLBwOE/rA36rwWSux5izsq4+pj/IXLL9opCry7O9T8MzeIwXYCuxe4Uy8Oiohmo3+2mG/79T21ywf0d90L6Eez9lPKBI5JVT9o1YT5tTPbohFfQkCjh6+FRyMrU7ftyiBN3Z1RP00mGr/UB4VkOjNnDm7BphmznH42Phm6QFT77NXI03MOpScEqykQjH5RlVl5K9vMg35PO9w8nqMR64jj30E3ueb5lLQxnV30f4LAtenAP9ftZKKaNcXCsuQ5GKiPA5gPVEXchg3/s4idzVrfYI/Lf9RBrAr5dIxH6Wb9v3g8a1Wj9GclS4F1niVo7gUdgdaK32cLnB6K7bq7jizfIBk0LMUVVuZPVuO+eWnyT9iLrCf+GcHCQGusaILT3cpA+l7sx856DzZrC2eXg2iqTSWkUVUH27zTAMKtP+wqszt7yiMJ1TiRIiBQ09lUJIfFwsDpittpC40vTOWVVgGX2oZnAjCnKlrILgrz6VF4wpMto702Acl8wqAUzTB7kDYCtlxhABH2uOBxcLLsX3yXu3mXbbiTmj4iZUMnUAyFZDeReTqEMF+xwM9b6TH7M1+tyYcjvKOd2GQGQ4FDsYC6aujcaH2DrAwr/I
+  template:
+    metadata:
+      creationTimestamp: null
+      name: ejemplo-secret
+      namespace: default
