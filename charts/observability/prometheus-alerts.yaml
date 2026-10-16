@@ -43,6 +43,7 @@ spec:
             runbook: "https://github.com/AJCG03/gitops-sa-p6-202201130/blob/main/P10/runbooks/sensores-availability.md"
           annotations:
             summary: "Presupuesto de error de sensores-service al 50%"
+            runbook: "https://github.com/AJCG03/gitops-sa-p6-202201130/blob/main/P10/runbooks/sensores-availability.md"
             description: |
               El presupuesto de error del SLO de disponibilidad de
               sensores-service está al {{ $value | humanizePercentage }}
@@ -79,6 +80,7 @@ spec:
             runbook: "https://github.com/AJCG03/gitops-sa-p6-202201130/blob/main/P10/runbooks/datos-latency.md"
           annotations:
             summary: "Presupuesto de latencia de datos-service al 50%"
+            runbook: "https://github.com/AJCG03/gitops-sa-p6-202201130/blob/main/P10/runbooks/datos-latency.md"
             description: |
               El presupuesto de error del SLO de latencia de datos-service
               está al {{ $value | humanizePercentage }} consumido en la
